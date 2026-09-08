@@ -1,0 +1,674 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Quiz Battle</title>
+    <style>
+        :root {
+            --bg-dark: #0f172a;
+            --bg-panel: rgba(30, 41, 59, 0.7);
+            --primary: #00d4ff;
+            --secondary: #ff00aa;
+            --gold: #ffd700;
+            --white: #ffffff;
+            --red: #ef4444;
+            --green: #10b981;
+            --border: rgba(0, 212, 255, 0.3);
+            --font: 'Segoe UI', system-ui, sans-serif;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: var(--font); -webkit-tap-highlight-color: transparent; touch-action: manipulation; user-select: none; -webkit-user-select: none; }
+
+        body { background: var(--bg-dark); color: #fff; overflow: hidden; height: 100vh; height: 100dvh; display: flex; justify-content: center; align-items: center; }
+
+        /* Animated Background */
+        .bg-code { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; background: linear-gradient(45deg, #000428, #004e92); animation: gridMove 15s linear infinite; }
+        .bg-code::after { content: ""; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: repeating-linear-gradient(0deg, transparent, transparent 40px, rgba(0, 212, 255, 0.05) 40px, rgba(0, 212, 255, 0.05) 41px), repeating-linear-gradient(90deg, transparent, transparent 40px, rgba(0, 212, 255, 0.05) 40px, rgba(0, 212, 255, 0.05) 41px); }
+        @keyframes gridMove { from { background-position: 0 0; } to { background-position: 0 50px; } }
+
+        /* Main Container */
+        .app-container {
+            width: 900px; height: 900px; max-width: 100vw; max-height: 100vh; max-height: 100dvh;
+            background: rgba(0, 10, 20, 0.85); border: 2px solid var(--border); border-radius: 20px;
+            box-shadow: 0 0 40px rgba(0, 212, 255, 0.3), inset 0 0 20px rgba(0, 212, 255, 0.1);
+            display: flex; flex-direction: column; overflow: hidden; position: relative;
+            backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+        }
+
+        /* Browser Top */
+        .browser-top { background: rgba(0,0,0,0.5); padding: 12px 20px; border-bottom: 1px solid var(--border); }
+        .top-bar-content { display: flex; align-items: center; gap: 10px; }
+        .dots { display: flex; gap: 5px; }
+        .dot { width: 12px; height: 12px; border-radius: 50%; }
+        .dot.red { background: #ff5f57; } .dot.yellow { background: #febc2e; } .dot.green { background: #28c840; }
+        .url-bar { flex: 1; background: rgba(0, 212, 255, 0.1); border: 1px solid var(--border); border-radius: 8px; padding: 6px 15px; color: #aaa; font-size: 0.8rem; text-align: center; }
+        .logout-btn { background: var(--red); color: #fff; border: none; border-radius: 8px; padding: 6px 15px; font-weight: bold; cursor: pointer; font-size: 0.8rem; transition: 0.3s; display: none; }
+        .logout-btn:hover { background: #dc2626; }
+
+        /* Screen Container */
+        .screens-wrapper { flex: 1; position: relative; overflow: hidden; }
+        .screen { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 40px; text-align: center; opacity: 0; visibility: hidden; transform: translateY(100%); transition: all 0.8s cubic-bezier(0.16, 1, 0.3, 1); z-index: 1; }
+        .screen.active { opacity: 1; visibility: visible; transform: translateY(0); z-index: 2; }
+
+        /* Typography & Motion */
+        .title { font-size: 4rem; font-weight: 900; letter-spacing: -1px; text-transform: uppercase; background: linear-gradient(90deg, var(--primary), #fff, var(--secondary), var(--primary)); background-size: 300% auto; -webkit-background-clip: text; -webkit-text-fill-color: transparent; animation: shine 4s linear infinite, floatY 3s infinite; }
+        @keyframes shine { to { background-position: 300% center; } }
+        @keyframes floatY { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+
+        .subtitle { color: #ccc; font-size: 1.2rem; margin-top: 10px; animation: fadeIn 2s infinite; }
+        @keyframes fadeIn { 0%, 100% { opacity: 0.5; } 50% { opacity: 1; } }
+
+        /* Buttons */
+        .btn { width: 100%; max-width: 400px; padding: 18px; font-size: 1.2rem; font-weight: bold; border-radius: 12px; border: 2px solid var(--primary); background: transparent; color: var(--primary); cursor: pointer; transition: 0.3s; animation: pulseBtn 2s infinite; }
+        @keyframes pulseBtn { 0%, 100% { box-shadow: 0 0 0 0 rgba(0, 212, 255, 0.4); } 50% { box-shadow: 0 0 0 15px rgba(0, 212, 255, 0); } }
+        .btn:hover { background: var(--primary); color: #000; transform: scale(1.02); }
+        .btn-danger { border-color: var(--secondary); color: var(--secondary); }
+        .btn-danger:hover { background: var(--secondary); color: #fff; }
+        .btn-small { padding: 8px 15px; font-size: 0.9rem; max-width: 100%; animation: none; }
+        .btn-green { border-color: var(--green); color: var(--green); }
+        .btn-green:hover { background: var(--green); color: #fff; }
+
+        /* Guidelines & Inputs */
+        .guideline-box { width: 100%; max-width: 600px; background: var(--bg-panel); border: 1px solid var(--border); border-radius: 15px; padding: 20px; text-align: left; margin-bottom: 20px; animation: slideInLeft 0.8s ease; }
+        @keyframes slideInLeft { from { opacity: 0; transform: translateX(-50px); } to { opacity: 1; transform: translateX(0); } }
+        .guideline-box p { margin-bottom: 10px; border-bottom: 1px dashed var(--border); padding-bottom: 10px; }
+        .guideline-box p:last-child { border-bottom: none; margin-bottom: 0; }
+
+        .input-group { width: 100%; max-width: 400px; margin-bottom: 20px; text-align: left; }
+        .input-group label { display: block; margin-bottom: 5px; color: var(--primary); font-weight: bold; }
+        /* UPDATED: inputs are set to type="text" so names are visible */
+        .input-group input { width: 100%; padding: 15px; background: rgba(0, 0, 0, 0.4); border: 1px solid var(--border); border-radius: 8px; color: #fff; font-size: 1.1rem; outline: none; transition: 0.3s; }
+        .input-group input:focus { border-color: var(--secondary); }
+        .hidden-field { display: none; }
+
+        /* Hidden Admin Login Box */
+        .admin-toggle-text { color: #64748b; font-size: 0.8rem; margin-top: 20px; cursor: pointer; text-decoration: underline; }
+        .admin-toggle-text:hover { color: var(--primary); }
+        
+        .admin-login-box { display: none; }
+        .admin-login-box.active { display: block; }
+        .admin-login-box .input-group label { color: var(--secondary); }
+
+        /* Dashboard Tabs */
+        .dashboard { display: none; flex-direction: column; width: 100%; height: 100%; }
+        .dashboard.active { display: flex; }
+        .tab-nav { display: flex; justify-content: space-around; padding: 15px; background: rgba(0,0,0,0.3); border-bottom: 1px solid var(--border); }
+        .tab-btn { flex: 1; padding: 12px; background: none; border: none; color: #aaa; font-size: 1.1rem; font-weight: bold; cursor: pointer; border-bottom: 3px solid transparent; transition: 0.3s; }
+        .tab-btn.active { color: var(--primary); border-bottom: 3px solid var(--primary); }
+        .tab-content { flex: 1; overflow-y: auto; padding: 20px; }
+
+        .info-card { background: var(--bg-panel); border: 1px solid var(--border); border-radius: 15px; padding: 20px; margin-bottom: 20px; }
+        .info-card h3 { color: var(--gold); margin-bottom: 15px; }
+        .stat-box { font-size: 3rem; font-weight: 900; color: var(--primary); margin-bottom: 5px; }
+        .queue-message { color: #ffaa00; font-weight: bold; font-size: 1.2rem; margin-top: 20px; }
+
+        /* Leaderboard & Admin Logic */
+        .list-row { display: flex; justify-content: space-between; align-items: center; padding: 15px; background: rgba(255,255,255,0.05); border: 1px solid var(--border); border-radius: 10px; margin-bottom: 10px; }
+        .rank-1 { border-left: 5px solid var(--gold); } .rank-2 { border-left: 5px solid #c0c0c0; } .rank-3 { border-left: 5px solid #cd7f32; }
+        .list-actions { display: flex; gap: 10px; }
+
+        /* CSV Upload */
+        .csv-upload-btn { display: inline-block; padding: 10px; background: var(--primary); color: #000; border-radius: 8px; cursor: pointer; font-weight: bold; }
+        
+        /* QUIZ INTERFACE */
+        .quiz-container { width: 100%; max-width: 700px; }
+        .quiz-timer { width: 100px; height: 100px; border-radius: 50%; border: 5px solid var(--primary); display: flex; justify-content: center; align-items: center; font-size: 2.5rem; font-weight: bold; margin: 0 auto 20px auto; color: var(--primary); background: rgba(0,0,0,0.5); }
+        .quiz-question { font-size: 1.8rem; color: #fff; margin-bottom: 40px; padding: 20px; background: var(--bg-panel); border: 1px solid var(--border); border-radius: 15px; text-align: left; }
+        
+        .answer-options { display: flex; flex-direction: column; gap: 15px; }
+        .btn-option { background: rgba(0, 212, 255, 0.1); border: 2px solid var(--border); border-radius: 12px; color: #fff; cursor: pointer; font-size: 1.2rem; padding: 20px; text-align: left; transition: 0.2s; }
+        .btn-option:hover { border-color: var(--primary); background: rgba(0, 212, 255, 0.3); }
+        .btn-option.correct { background: #28c840; border-color: #28c840; }
+        .btn-option.wrong { background: #ff3333; border-color: #ff3333; }
+
+        /* Table */
+        .data-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        .data-table th, .data-table td { padding: 10px; border: 1px solid var(--border); text-align: left; }
+        .data-table th { background: rgba(0, 212, 255, 0.2); color: var(--primary); }
+
+        /* Mobile */
+        @media (max-width: 900px) {
+            .app-container { width: 100vw; height: 100vh; height: 100dvh; border-radius: 0; border: none; }
+            .tab-btn { font-size: 0.9rem; }
+            .data-table th, .data-table td { padding: 5px; font-size: 0.8rem; }
+            .logout-btn { font-size: 0.7rem; padding: 4px 8px; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="bg-code"></div>
+
+    <div class="app-container">
+        <div class="browser-top">
+            <div class="top-bar-content">
+                <div class="dots"><div class="dot red"></div><div class="dot yellow"></div><div class="dot green"></div></div>
+                <div class="url-bar">Quiz Battle Arena</div>
+                <button class="logout-btn" onclick="logout()" id="logoutBtn">[ LOGOUT ]</button>
+            </div>
+        </div>
+
+        <div class="screens-wrapper">
+
+            <!-- 1. Welcome Screen -->
+            <div class="screen active" id="page-welcome">
+                <h1 class="title">Quiz Battle</h1>
+                <p class="subtitle">Where Knowledge Meets Strategy</p>
+                <button class="btn" onclick="goToScreen(1)" style="margin-top: 50px;">Enter Arena</button>
+            </div>
+
+            <!-- 2. Guidelines Screen -->
+            <div class="screen" id="page-guidelines">
+                <h2 style="font-size: 2rem; color: var(--primary); margin-bottom: 30px; animation: floatY 3s infinite;">Battle Rules</h2>
+                <div class="guideline-box">
+                    <p><strong>Total Questions:</strong> 30</p>
+                    <p><strong>Time per Question:</strong> 15 Seconds (Auto-submit)</p>
+                    <p><strong>Scoring:</strong> +5 Correct, -2 Wrong</p>
+                    <p><strong>Selection:</strong> Select an answer to auto-scroll to the next question.</p>
+                </div>
+                <button class="btn" onclick="goToScreen(2)">Proceed to Login</button>
+            </div>
+
+            <!-- 3. Login / Registration Screen (Student View) -->
+            <div class="screen" id="page-login">
+                <h2 style="font-size: 2rem; color: var(--primary); margin-bottom: 30px;">Enter the Battlefield</h2>
+                
+                <!-- Standard Student Form (Visible Text) -->
+                <div id="studentLoginBox">
+                    <div class="input-group">
+                        <label>Team Name</label>
+                        <input type="text" id="teamName" placeholder="Enter your Team Name">
+                    </div>
+                    <div class="input-group">
+                        <label>Student UID</label>
+                        <input type="text" id="leaderUid" placeholder="UID">
+                    </div>
+                    <div class="input-group">
+                        <label>Team Leader Name</label>
+                        <input type="text" id="leaderName" placeholder="Leader Name">
+                    </div>
+                </div>
+
+                <!-- Hidden Admin Form (Admin Username and Password) -->
+                <div id="adminLoginBox" class="admin-login-box">
+                    <div class="input-group">
+                        <label>Admin Username</label>
+                        <input type="text" id="adminUser" placeholder="Username">
+                    </div>
+                    <div class="input-group">
+                        <label>Admin Password</label>
+                        <input type="password" id="adminPass" placeholder="Password">
+                    </div>
+                </div>
+
+                <button class="btn" onclick="login()">Initiate Battle</button>
+                
+                <!-- Hidden Admin Access Toggle -->
+                <div class="admin-toggle-text" onclick="toggleAdminMode()" id="adminToggleText">v1.2 | Admin Access?</div>
+            </div>
+
+            <!-- 4. MAIN DASHBOARD -->
+            <div class="dashboard" id="main-dashboard">
+                <div class="tab-nav" id="tabNav"></div>
+                <div class="tab-content" id="tabContent"></div>
+            </div>
+
+            <!-- 5. QUIZ SCREEN -->
+            <div class="screen" id="page-quiz">
+                <div class="quiz-timer" id="quizTimer">15</div>
+                <div class="quiz-question" id="questionText">Loading Question...</div>
+                <div class="answer-options" id="answerOptions"></div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        // --- SECURITY: OBFUSCATED ADMIN CREDENTIALS (Base64 Encoded) ---
+        const ADMIN_USER = btoa("E18539"); 
+        const ADMIN_PASS = btoa("Oscar@080422"); 
+
+        // --- Maximum Participants Limit (100) ---
+        const MAX_PARTICIPANTS = 100;
+
+        let isAdminMode = false;
+        let currentScreen = 0;
+        const screens = document.querySelectorAll('.screen');
+        let currentUser = {};
+        let isAdmin = false;
+
+        // Empty Database
+        let participants = [];
+
+        // Question Bank (30 questions)
+        let questions = Array.from({ length: 30 }, (_, i) => ({
+            q: `Question ${i + 1}: What is the SWOT analysis?`,
+            options: ["Strength, Weaknesses, Opportunities, Threats", "Strategic, Wide, Overall, Tactics"],
+            correct: 0
+        }));
+
+        let isQuizRunning = false;
+        let timePerQuestion = 15; 
+        let currentQuestionIndex = 0;
+        let timerInterval;
+
+        function goToScreen(index) {
+            screens[currentScreen].classList.remove('active');
+            currentScreen = index;
+            screens[currentScreen].classList.add('active');
+        }
+
+        function toggleAdminMode() {
+            isAdminMode = !isAdminMode;
+            const studentBox = document.getElementById('studentLoginBox');
+            const adminBox = document.getElementById('adminLoginBox');
+            const text = document.getElementById('adminToggleText');
+
+            if (isAdminMode) {
+                studentBox.style.display = 'none';
+                adminBox.classList.add('active');
+                text.textContent = "v1.2 | Back to Student Login";
+            } else {
+                studentBox.style.display = 'block';
+                adminBox.classList.remove('active');
+                text.textContent = "v1.2 | Admin Access?";
+            }
+        }
+
+        function login() {
+            if (isAdminMode) {
+                const adminUser = document.getElementById('adminUser').value.trim();
+                const adminPass = document.getElementById('adminPass').value.trim();
+
+                if (!adminUser || !adminPass) { alert("Please enter Admin credentials."); return; }
+
+                if (adminUser === atob(ADMIN_USER) && adminPass === atob(ADMIN_PASS)) {
+                    isAdmin = true;
+                    currentUser = { name: "Admin HQ", score: 0, rank: 99, qualified: true, approved: true };
+                    enterDashboard();
+                } else {
+                    alert("Invalid Admin Credentials.");
+                }
+            } else {
+                const teamName = document.getElementById('teamName').value.trim();
+                const leaderUid = document.getElementById('leaderUid').value.trim();
+                const leaderName = document.getElementById('leaderName').value.trim();
+
+                if (!teamName || !leaderUid || !leaderName) { 
+                    alert("All fields are mandatory."); 
+                    return; 
+                }
+
+                // Maximum Limit Check
+                if (participants.length >= MAX_PARTICIPANTS) {
+                    alert("Maximum capacity of 100 participants has been reached. You cannot join.");
+                    return;
+                }
+
+                isAdmin = false;
+                currentUser = { name: teamName, uid: leaderUid, leaderName: leaderName, score: 0, rank: participants.length + 1, qualified: true, approved: false };
+                participants.push(currentUser);
+                
+                enterDashboard();
+            }
+        }
+
+        function enterDashboard() {
+            document.getElementById('logoutBtn').style.display = 'block';
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById('main-dashboard').classList.add('active');
+            setupDashboardTabs();
+        }
+
+        function logout() {
+            isAdmin = false;
+            currentUser = {};
+            isAdminMode = false;
+            document.getElementById('adminLoginBox').classList.remove('active');
+            document.getElementById('studentLoginBox').style.display = 'block';
+            
+            document.getElementById('logoutBtn').style.display = 'none';
+            document.getElementById('main-dashboard').classList.remove('active');
+            document.getElementById('page-quiz').classList.remove('active');
+            document.getElementById('teamName').value = '';
+            document.getElementById('leaderUid').value = '';
+            document.getElementById('leaderName').value = '';
+            document.getElementById('adminUser').value = '';
+            document.getElementById('adminPass').value = '';
+            document.getElementById('adminToggleText').textContent = "v1.2 | Admin Access?";
+            
+            if(timerInterval) clearInterval(timerInterval);
+            currentScreen = 0;
+            screens[0].classList.add('active');
+        }
+
+        function setupDashboardTabs() {
+            const tabNav = document.getElementById('tabNav');
+            tabNav.innerHTML = '';
+
+            if (isAdmin) {
+                tabNav.innerHTML = `
+                    <button class="tab-btn active" onclick="switchTab('admin-pos', this)">My Position</button>
+                    <button class="tab-btn" onclick="switchTab('admin-controls', this)">Admin Controls</button>
+                    <button class="tab-btn" onclick="switchTab('admin-backend', this)">Backend Data</button>
+                    <button class="tab-btn" onclick="switchTab('admin-leadership', this)">Leadership</button>
+                `;
+                switchTab('admin-pos', tabNav.children[0]);
+            } else {
+                tabNav.innerHTML = `
+                    <button class="tab-btn active" onclick="switchTab('user-pos', this)">My Position</button>
+                `;
+                switchTab('user-pos', tabNav.children[0]);
+            }
+        }
+
+        function switchTab(tabName, btnElement) {
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            btnElement.classList.add('active');
+            const content = document.getElementById('tabContent');
+
+            if (tabName === 'admin-pos') {
+                content.innerHTML = `<h2 style="color:var(--primary); margin-bottom:20px;">Admin Control Center</h2>
+                    <div class="info-card"><h3>Full capabilities unlocked.</h3></div>`;
+            } 
+            else if (tabName === 'user-pos') {
+                let myData = participants.find(p => p.name === currentUser.name);
+                
+                if (myData && !myData.approved) {
+                    content.innerHTML = `<h2 style="color:var(--primary); margin-bottom:20px;">Queue Status</h2>
+                        <div class="info-card">
+                            <h3>Team: ${currentUser.name}</h3>
+                            <p class="queue-message">You are in the queue. Waiting for Admin Approval to enter the quiz...</p>
+                        </div>`;
+                } 
+                else {
+                    let sorted = participants.filter(p => p.approved).sort((a, b) => a.rank - b.rank || b.score - a.score);
+                    let myRank = sorted.findIndex(p => p.name === currentUser.name) + 1;
+                    let qualMessage = (myData && !myData.qualified) ? `<div style="color:var(--red); font-weight:bold; margin-top:10px;">Did Not Qualify</div>` : '';
+
+                    content.innerHTML = `<h2 style="color:var(--primary); margin-bottom:20px;">My Details & Position</h2>
+                        <div class="info-card">
+                            <h3>Team: ${currentUser.name}</h3>
+                            <div class="stat-box">${myData ? myData.score : 0} Points</div>
+                            <p style="font-size: 1.5rem; margin-top: 10px;">Current Rank: #${myRank > 0 ? myRank : 'N/A'}</p>
+                            ${qualMessage}
+                            <button class="btn" onclick="startQuiz()" style="margin-top:20px;">Start Quiz</button>
+                        </div>
+                        <div class="info-card"><h3>All Participants</h3><div id="userList"></div></div>`;
+                    renderParticipantList();
+                }
+            }
+            else if (tabName === 'admin-controls') {
+                content.innerHTML = `<h2 style="color:var(--primary); margin-bottom:20px;">Admin Controls</h2>
+                    <div class="info-card">
+                        <h3>Quiz Engine</h3>
+                        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                            <button class="btn btn-small" id="quizToggleBtn" onclick="toggleQuiz()">Start Quiz</button>
+                            <button class="btn btn-small btn-danger" onclick="stopQuiz()">Stop</button>
+                        </div>
+                        <div style="margin-top:15px; border-top:1px solid var(--border); padding-top:15px;">
+                            <label>Time per Question (sec):</label>
+                            <input type="number" id="timeInput" value="${timePerQuestion}" style="width:70px; padding:8px; background:black; color:white; border:1px solid var(--border); margin-top:5px;">
+                            <button class="btn btn-small" onclick="updateTime()">Update</button>
+                        </div>
+                    </div>
+
+                    <div class="info-card">
+                        <h3>Bulk Upload (CSV)</h3>
+                        <input type="file" id="csvUpload" accept=".csv" onchange="handleCSVUpload(event)" style="display:none;">
+                        <label for="csvUpload" class="csv-upload-btn">Choose CSV</label>
+                        <p style="color:#aaa; font-size:0.9rem; margin-top:10px;">Format: <code>Question, Opt 1, Opt 2, Correct Index (0 or 1)</code></p>
+                    </div>
+
+                    <div class="info-card">
+                        <h3>Question Bank</h3>
+                        <div id="questionAdminList"></div>
+                        <button class="btn btn-small" onclick="addNewQuestion()" style="margin-top:10px;">+ Add Question</button>
+                    </div>`;
+                renderAdminControls();
+            }
+            else if (tabName === 'admin-backend') {
+                content.innerHTML = `<h2 style="color:var(--primary); margin-bottom:20px;">Backend Participant Data</h2>
+                    <div class="info-card">
+                        <h3>All Registered Teams</h3>
+                        <div id="backendTable"></div>
+                    </div>`;
+                renderBackendData();
+            }
+            else if (tabName === 'admin-leadership') {
+                content.innerHTML = `<h2 style="color:var(--gold); margin-bottom:20px;">Leadership Manager</h2>
+                    <p style="color:#aaa; margin-bottom:20px;">Manually set ranks and qualification.</p>
+                    <div id="rankManagerList"></div>`;
+                renderRankManager();
+            }
+        }
+
+        function renderParticipantList() {
+            let listHtml = "";
+            participants.filter(p => p.approved).sort((a, b) => a.rank - b.rank || b.score - a.score).forEach((p, i) => {
+                let qualText = (p.qualified === false || p.score < 0) ? ' (Did Not Qualify)' : '';
+                listHtml += `<div class="list-row"><span>#${i+1} ${p.name}${qualText}</span><span>${p.score} pts</span></div>`;
+            });
+            document.getElementById('userList').innerHTML = listHtml || "<p style='color:#aaa;'>No other participants yet.</p>";
+        }
+
+        function renderAdminControls() {
+            let qHtml = "";
+            questions.forEach((q, index) => {
+                qHtml += `<div class="list-row">
+                    <span>${index+1}. ${q.q}</span>
+                    <div class="list-actions">
+                        <button class="btn btn-small" style="border-color:var(--gold); color:var(--gold);" onclick="updateQuestion(${index})">Edit</button>
+                        <button class="btn btn-small btn-danger" onclick="deleteQuestion(${index})">Del</button>
+                    </div>
+                </div>`;
+            });
+            document.getElementById('questionAdminList').innerHTML = qHtml;
+        }
+
+        function renderBackendData() {
+            let tableHtml = `<table class="data-table"><tr><th>Team</th><th>UID</th><th>Leader</th><th>Score</th><th>Status</th><th>Action</th></tr>`;
+            
+            let sorted = participants.sort((a, b) => a.rank - b.rank || b.score - a.score);
+            sorted.forEach((p) => {
+                let status = p.approved ? 'Active' : 'Queue';
+                let action = p.approved ? '' : `<button class="btn btn-small btn-green" onclick="approveUser('${p.name}')">Approve</button>`;
+
+                tableHtml += `<tr>
+                    <td>${p.name}</td>
+                    <td>${p.uid || 'N/A'}</td>
+                    <td>${p.leaderName || 'N/A'}</td>
+                    <td>${p.score}</td>
+                    <td style="color:${p.approved ? 'var(--green)' : 'var(--gold)'};">${status}</td>
+                    <td>${action}</td>
+                </tr>`;
+            });
+            tableHtml += `</table>`;
+            document.getElementById('backendTable').innerHTML = tableHtml || "<p>No teams yet.</p>";
+        }
+
+        function renderRankManager() {
+            let rankList = participants.filter(p => p.approved).sort((a, b) => a.rank - b.rank || b.score - a.score);
+            let rHtml = "";
+            rankList.forEach((p, index) => {
+                let qualBtn = (p.qualified === false || p.score < 0) 
+                    ? `<button class="btn btn-small btn-green" onclick="toggleQualify('${p.name}', true)">Qualify</button>` 
+                    : `<button class="btn btn-small btn-danger" onclick="toggleQualify('${p.name}', false)">Disqualify</button>`;
+
+                rHtml += `<div class="list-row">
+                    <span><strong>#${index+1}:</strong> ${p.name} (${p.score} pts)</span>
+                    <div class="list-actions">
+                        <button class="btn btn-small" onclick="moveRank('${p.name}', -1)">Up</button>
+                        <button class="btn btn-small" onclick="moveRank('${p.name}', 1)">Down</button>
+                        ${qualBtn}
+                    </div>
+                </div>`;
+            });
+            document.getElementById('rankManagerList').innerHTML = rHtml || "<p>No active teams to rank.</p>";
+        }
+
+        // ADMIN ACTIONS
+        function approveUser(name) {
+            let user = participants.find(p => p.name === name);
+            if (user) {
+                user.approved = true;
+                renderBackendData();
+                renderRankManager();
+                alert(`${name} has been approved!`);
+            }
+        }
+
+        function toggleQuiz() {
+            isQuizRunning = !isQuizRunning;
+            const btn = document.getElementById('quizToggleBtn');
+            btn.textContent = isQuizRunning ? "Pause Quiz" : "Start Quiz";
+            if (isQuizRunning) {
+                setInterval(() => {
+                    participants.filter(p => p.approved).forEach(p => {
+                        if (Math.random() > 0.7 && p.name !== "Admin HQ") p.score += 5;
+                    });
+                    if(document.getElementById('tabContent').innerHTML.includes('userList')) renderParticipantList();
+                    if(document.getElementById('tabContent').innerHTML.includes('rankManagerList')) renderRankManager();
+                    if(document.getElementById('tabContent').innerHTML.includes('backendTable')) renderBackendData();
+                }, 3000);
+            }
+        }
+
+        function stopQuiz() {
+            isQuizRunning = false;
+            document.getElementById('quizToggleBtn').textContent = "Start Quiz";
+        }
+
+        function toggleQualify(name, status) {
+            let user = participants.find(p => p.name === name);
+            if (user) {
+                user.qualified = status;
+                if (status === false) user.score = -1;
+                else if (user.score < 0) user.score = 0;
+                renderRankManager();
+                renderBackendData();
+                renderParticipantList();
+            }
+        }
+
+        function updateTime() {
+            timePerQuestion = parseInt(document.getElementById('timeInput').value) || 15;
+            alert(`Time per question updated to ${timePerQuestion} seconds.`);
+        }
+
+        function handleCSVUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const lines = e.target.result.split('\n');
+                for (let i = 0; i < lines.length; i++) {
+                    if (lines[i].trim() === '') continue;
+                    const parts = lines[i].split(',');
+                    if (parts.length >= 4) {
+                        questions.push({ q: parts[0].trim(), options: [parts[1].trim(), parts[2].trim()], correct: parseInt(parts[3].trim()) });
+                    }
+                }
+                renderAdminControls();
+                alert('Questions uploaded!');
+            };
+            reader.readAsText(file);
+        }
+
+        function addNewQuestion() {
+            let newQ = prompt("Enter new battle question:");
+            if(newQ) { questions.push({ q: newQ, options: ["Option 1", "Option 2"], correct: 0 }); renderAdminControls(); }
+        }
+
+        function updateQuestion(index) {
+            let newQ = prompt("Update question:", questions[index].q);
+            if(newQ) { questions[index].q = newQ; renderAdminControls(); }
+        }
+
+        function deleteQuestion(index) {
+            questions.splice(index, 1);
+            renderAdminControls();
+        }
+
+        function moveRank(name, direction) {
+            let sorted = participants.filter(p => p.approved).sort((a, b) => a.rank - b.rank || b.score - a.score);
+            let index = sorted.findIndex(p => p.name === name);
+            let newIndex = index + direction;
+            if (newIndex >= 0 && newIndex < sorted.length) {
+                let tempRank = sorted[index].rank;
+                sorted[index].rank = sorted[newIndex].rank;
+                sorted[newIndex].rank = tempRank;
+            }
+            renderRankManager();
+            renderBackendData();
+            renderParticipantList();
+        }
+
+        // QUIZ LOGIC (AUTO SCROLL)
+        function startQuiz() {
+            currentQuestionIndex = 0;
+            goToScreen(4);
+            loadQuestion();
+        }
+
+        function loadQuestion() {
+            if (currentQuestionIndex >= questions.length) {
+                alert("Quiz Completed! Check your final score.");
+                logout();
+                return;
+            }
+
+            const q = questions[currentQuestionIndex];
+            document.getElementById('questionText').textContent = q.q;
+            
+            const optionsHtml = q.options.map((opt, i) => 
+                `<button class="btn-option" id="opt${i}" onclick="checkAnswer(${i})">${opt}</button>`
+            ).join('');
+            
+            document.getElementById('answerOptions').innerHTML = optionsHtml;
+            
+            document.querySelectorAll('.btn-option').forEach(btn => btn.classList.remove('correct', 'wrong'));
+
+            let timeLeft = timePerQuestion;
+            document.getElementById('quizTimer').textContent = timeLeft;
+            
+            if (timerInterval) clearInterval(timerInterval);
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                document.getElementById('quizTimer').textContent = timeLeft;
+                if (timeLeft <= 0) {
+                    clearInterval(timerInterval);
+                    setTimeout(() => {
+                        currentQuestionIndex++;
+                        loadQuestion();
+                    }, 1000);
+                }
+            }, 1000);
+        }
+
+        function checkAnswer(index) {
+            clearInterval(timerInterval);
+            const q = questions[currentQuestionIndex];
+            const selectedBtn = document.getElementById(`opt${index}`);
+            const correctBtn = document.getElementById(`opt${q.correct}`);
+
+            selectedBtn.classList.add(index === q.correct ? 'correct' : 'wrong');
+            correctBtn.classList.add('correct');
+
+            if (index === q.correct) {
+                let user = participants.find(p => p.name === currentUser.name);
+                if(user) user.score += 5;
+            } else {
+                let user = participants.find(p => p.name === currentUser.name);
+                if(user) user.score -= 2;
+            }
+
+            setTimeout(() => {
+                currentQuestionIndex++;
+                loadQuestion();
+            }, 1500);
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,784 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Quiz Battle</title>
+    
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
+    <style>
+        :root {
+            --bg-dark: #0f172a;
+            --bg-panel: rgba(30, 41, 59, 0.7);
+            --primary: #00d4ff;
+            --secondary: #ff00aa;
+            --gold: #ffd700;
+            --red: #ef4444;
+            --green: #10b981;
+            --border: rgba(0, 212, 255, 0.3);
+            --font: 'Segoe UI', system-ui, sans-serif;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: var(--font); -webkit-tap-highlight-color: transparent; touch-action: manipulation; user-select: none; -webkit-user-select: none; }
+
+        body { background: var(--bg-dark); color: #fff; overflow: hidden; height: 100vh; height: 100dvh; display: flex; justify-content: center; align-items: center; }
+
+        .bg-code { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; background: linear-gradient(45deg, #000428, #004e92); animation: gridMove 15s linear infinite; }
+        .bg-code::after { content: ""; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: repeating-linear-gradient(0deg, transparent, transparent 40px, rgba(0, 212, 255, 0.05) 40px, rgba(0, 212, 255, 0.05) 41px), repeating-linear-gradient(90deg, transparent, transparent 40px, rgba(0, 212, 255, 0.05) 40px, rgba(0, 212, 255, 0.05) 41px); }
+        @keyframes gridMove { from { background-position: 0 0; } to { background-position: 0 50px; } }
+
+        .app-container { width: 900px; height: 900px; max-width: 100vw; max-height: 100vh; max-height: 100dvh; background: rgba(0, 10, 20, 0.85); border: 2px solid var(--border); border-radius: 20px; box-shadow: 0 0 40px rgba(0, 212, 255, 0.3), inset 0 0 20px rgba(0, 212, 255, 0.1); display: flex; flex-direction: column; overflow: hidden; position: relative; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
+
+        .browser-top { background: rgba(0,0,0,0.5); padding: 12px 20px; border-bottom: 1px solid var(--border); }
+        .top-bar-content { display: flex; align-items: center; gap: 10px; }
+        .dots { display: flex; gap: 5px; }
+        .dot { width: 12px; height: 12px; border-radius: 50%; }
+        .dot.red { background: #ff5f57; } .dot.yellow { background: #febc2e; } .dot.green { background: #28c840; }
+        .url-bar { flex: 1; background: rgba(0, 212, 255, 0.1); border: 1px solid var(--border); border-radius: 8px; padding: 6px 15px; color: #aaa; font-size: 0.8rem; text-align: center; }
+        .logout-btn { background: var(--red); color: #fff; border: none; border-radius: 8px; padding: 6px 15px; font-weight: bold; cursor: pointer; font-size: 0.8rem; transition: 0.3s; display: none; }
+        .logout-btn:hover { background: #dc2626; }
+
+        .screens-wrapper { flex: 1; position: relative; overflow: hidden; }
+        .screen { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 20px; text-align: center; opacity: 0; visibility: hidden; transform: translateY(100%); transition: all 0.8s cubic-bezier(0.16, 1, 0.3, 1); z-index: 1; }
+        .screen.active { opacity: 1; visibility: visible; transform: translateY(0); z-index: 2; }
+
+        .title { font-size: 4rem; font-weight: 900; letter-spacing: -1px; text-transform: uppercase; background: linear-gradient(90deg, var(--primary), #fff, var(--secondary), var(--primary)); background-size: 300% auto; -webkit-background-clip: text; -webkit-text-fill-color: transparent; animation: shine 4s linear infinite, floatY 3s infinite; }
+        @keyframes shine { to { background-position: 300% center; } }
+        @keyframes floatY { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+
+        .btn { width: 100%; max-width: 400px; padding: 18px; font-size: 1.2rem; font-weight: bold; border-radius: 12px; border: 2px solid var(--primary); background: transparent; color: var(--primary); cursor: pointer; transition: 0.3s; animation: pulseBtn 2s infinite; }
+        @keyframes pulseBtn { 0%, 100% { box-shadow: 0 0 0 0 rgba(0, 212, 255, 0.4); } 50% { box-shadow: 0 0 0 15px rgba(0, 212, 255, 0); } }
+        .btn:hover { background: var(--primary); color: #000; transform: scale(1.02); }
+        .btn-danger { border-color: var(--secondary); color: var(--secondary); }
+        .btn-danger:hover { background: var(--secondary); color: #fff; }
+        .btn-small { padding: 8px 12px; font-size: 0.9rem; max-width: 100%; animation: none; margin: 0 5px;}
+        .btn-green { border-color: var(--green); color: var(--green); }
+        .btn-green:hover { background: var(--green); color: #fff; }
+
+        .guideline-box { width: 100%; max-width: 600px; background: var(--bg-panel); border: 1px solid var(--border); border-radius: 15px; padding: 20px; text-align: left; margin-bottom: 20px; animation: slideInLeft 0.8s ease; }
+        @keyframes slideInLeft { from { opacity: 0; transform: translateX(-50px); } to { opacity: 1; transform: translateX(0); } }
+        .guideline-box p { margin-bottom: 10px; border-bottom: 1px dashed var(--border); padding-bottom: 10px; }
+        .guideline-box p:last-child { border-bottom: none; margin-bottom: 0; }
+
+        .input-group { width: 100%; max-width: 400px; margin-bottom: 20px; text-align: left; }
+        .input-group label { display: block; margin-bottom: 5px; color: var(--primary); font-weight: bold; }
+        .input-group input { width: 100%; padding: 15px; background: rgba(0, 0, 0, 0.4); border: 1px solid var(--border); border-radius: 8px; color: #fff; font-size: 1.1rem; outline: none; transition: 0.3s; }
+        .input-group input:focus { border-color: var(--secondary); }
+        .hidden-field { display: none; }
+
+        .admin-toggle-text { color: #64748b; font-size: 0.8rem; margin-top: 20px; cursor: pointer; text-decoration: underline; }
+        .admin-toggle-text:hover { color: var(--primary); }
+        .admin-login-box { display: none; }
+        .admin-login-box.active { display: block; }
+        .admin-login-box .input-group label { color: var(--secondary); }
+
+        .dashboard { display: none; flex-direction: column; width: 100%; height: 100%; }
+        .dashboard.active { display: flex; }
+        .tab-nav { display: flex; justify-content: space-around; padding: 15px; background: rgba(0,0,0,0.3); border-bottom: 1px solid var(--border); }
+        .tab-btn { flex: 1; padding: 12px; background: none; border: none; color: #aaa; font-size: 1.1rem; font-weight: bold; cursor: pointer; border-bottom: 3px solid transparent; transition: 0.3s; }
+        .tab-btn.active { color: var(--primary); border-bottom: 3px solid var(--primary); }
+        .tab-content { flex: 1; overflow-y: auto; padding: 20px; }
+
+        .info-card { background: var(--bg-panel); border: 1px solid var(--border); border-radius: 15px; padding: 20px; margin-bottom: 20px; }
+        .info-card h3 { color: var(--gold); margin-bottom: 15px; }
+        .stat-box { font-size: 3rem; font-weight: 900; color: var(--primary); margin-bottom: 5px; }
+        .queue-message { color: #ffaa00; font-weight: bold; font-size: 1.2rem; margin-top: 20px; }
+
+        .list-row { display: flex; justify-content: space-between; align-items: center; padding: 15px; background: rgba(255,255,255,0.05); border: 1px solid var(--border); border-radius: 10px; margin-bottom: 10px; }
+        .list-actions { display: flex; gap: 10px; }
+
+        .csv-upload-btn { display: inline-block; padding: 10px; background: var(--primary); color: #000; border-radius: 8px; cursor: pointer; font-weight: bold; }
+
+        .quiz-container { width: 100%; max-width: 750px; position: relative; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 15px; }
+        
+        .quiz-score-display { position: absolute; top: 0; right: 0; background: var(--bg-panel); border: 1px solid var(--green); border-radius: 10px; padding: 8px 15px; font-weight: bold; color: var(--green); font-size: 1rem; }
+        .quiz-rank-display { position: absolute; top: 0; left: 0; background: var(--bg-panel); border: 1px solid var(--gold); border-radius: 10px; padding: 8px 15px; font-weight: bold; color: var(--gold); font-size: 1rem; }
+        
+        .quiz-timer { width: 70px; height: 70px; border-radius: 50%; border: 4px solid var(--primary); display: flex; justify-content: center; align-items: center; font-size: 2rem; font-weight: bold; margin-top: 30px; color: var(--primary); background: rgba(0,0,0,0.5); }
+        .quiz-question { font-size: 1.5rem; color: #fff; padding: 15px 20px; background: var(--bg-panel); border: 1px solid var(--border); border-radius: 15px; text-align: left; width: 100%; }
+        
+        .answer-options { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; width: 100%; }
+        .btn-option { background: rgba(0, 212, 255, 0.1); border: 2px solid var(--border); border-radius: 12px; color: #fff; cursor: pointer; font-size: 1rem; padding: 15px; text-align: left; transition: 0.2s; }
+        .btn-option:hover { border-color: var(--primary); background: rgba(0, 212, 255, 0.3); }
+        .btn-option.correct { background: #28c840; border-color: #28c840; }
+        .btn-option.wrong { background: #ff3333; border-color: #ff3333; }
+
+        .data-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        .data-table th, .data-table td { padding: 10px; border: 1px solid var(--border); text-align: left; }
+        .data-table th { background: rgba(0, 212, 255, 0.2); color: var(--primary); }
+
+        @media (max-width: 900px) {
+            .app-container { width: 100vw; height: 100vh; height: 100dvh; border-radius: 0; border: none; }
+            .tab-btn { font-size: 0.9rem; }
+            .data-table th, .data-table td { padding: 5px; font-size: 0.8rem; }
+            .quiz-question { font-size: 1.2rem; }
+            .answer-options { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="bg-code"></div>
+
+    <div class="app-container">
+        <div class="browser-top">
+            <div class="top-bar-content">
+                <div class="dots"><div class="dot red"></div><div class="dot yellow"></div><div class="dot green"></div></div>
+                <div class="url-bar">Quiz Battle Arena</div>
+                <button class="logout-btn" onclick="logout()" id="logoutBtn">[ LOGOUT ]</button>
+            </div>
+        </div>
+
+        <div class="screens-wrapper">
+
+            <div class="screen active" id="page-welcome">
+                <h1 class="title">Quiz Battle</h1>
+                <p class="subtitle">Where Knowledge Meets Strategy</p>
+                <button class="btn" onclick="goToScreen(1)" style="margin-top: 50px;">Enter Arena</button>
+            </div>
+
+            <div class="screen" id="page-guidelines">
+                <h2 style="font-size: 2rem; color: var(--primary); margin-bottom: 30px; animation: floatY 3s infinite;">Battle Rules</h2>
+                <div class="guideline-box">
+                    <p><strong>Total Questions:</strong> 50</p>
+                    <p><strong>Time per Question:</strong> 15 Seconds (Auto-submit)</p>
+                    <p><strong>Options per Question:</strong> 4 Options</p>
+                    <p><strong>Scoring:</strong> +5 Correct, -2 Wrong</p>
+                </div>
+                <button class="btn" onclick="goToScreen(2)">Proceed to Login</button>
+            </div>
+
+            <div class="screen" id="page-login">
+                <h2 style="font-size: 2rem; color: var(--primary); margin-bottom: 30px;">Enter the Battlefield</h2>
+                
+                <div id="studentLoginBox">
+                    <div class="input-group">
+                        <label>Team Name</label>
+                        <input type="text" id="teamName" placeholder="Enter your Team Name">
+                    </div>
+                    <div class="input-group">
+                        <label>Student UID</label>
+                        <input type="text" id="leaderUid" placeholder="UID">
+                    </div>
+                    <div class="input-group">
+                        <label>Team Leader Name</label>
+                        <input type="text" id="leaderName" placeholder="Leader Name">
+                    </div>
+                </div>
+
+                <div id="adminLoginBox" class="admin-login-box">
+                    <div class="input-group">
+                        <label>Admin Username</label>
+                        <input type="text" id="adminUser" placeholder="Username">
+                    </div>
+                    <div class="input-group">
+                        <label>Admin Password</label>
+                        <input type="password" id="adminPass" placeholder="Password">
+                    </div>
+                </div>
+
+                <button class="btn" onclick="login()">Initiate Battle</button>
+                
+                <div class="admin-toggle-text" onclick="toggleAdminMode()" id="adminToggleText">v1.2 | Admin Access?</div>
+            </div>
+
+            <div class="dashboard" id="main-dashboard">
+                <div class="tab-nav" id="tabNav"></div>
+                <div class="tab-content" id="tabContent"></div>
+            </div>
+
+            <div class="screen" id="page-quiz">
+                <div class="quiz-container">
+                    <div class="quiz-score-display" id="liveScore">Score: 0</div>
+                    <div class="quiz-rank-display" id="liveRank">Rank: #1</div>
+                    
+                    <div class="quiz-timer" id="quizTimer">15</div>
+                    <div class="quiz-question" id="questionText">Loading Question...</div>
+                    <div class="answer-options" id="answerOptions"></div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyBRVlyglVhaYbBWFwYa9jND1_1E8azc2SM",
+            authDomain: "quizbattle-cbff3.firebaseapp.com",
+            databaseURL: "https://quizbattle-cbff3-default-rtdb.firebaseio.com",
+            projectId: "quizbattle-cbff3",
+            storageBucket: "quizbattle-cbff3.firebasestorage.app",
+            messagingSenderId: "1023868373447",
+            appId: "1:1023868373447:web:25ab213cea1d8f286bb1e2",
+            measurementId: "G-XFGM5RKXF4"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
+        const ADMIN_USER = btoa("E18539"); 
+        const ADMIN_PASS = btoa("Oscar@080422"); 
+        const MAX_PARTICIPANTS = 100;
+
+        let isAdminMode = false;
+        let currentScreen = 0;
+        const screens = document.querySelectorAll('.screen');
+        let currentUser = {};
+        let isAdmin = false;
+
+        let participants = [];
+        let questions = [];
+        let isQuizRunning = false;
+        let timePerQuestion = 15; 
+        let currentQuestionIndex = 0;
+        let timerInterval;
+
+        let currentActiveTab = 'admin-pos';
+        let currentActiveBtnElement = null;
+
+        // ** THE EXACT 50 QUESTIONS PROVIDED BY THE USER **
+        let defaultQuestions = [
+            { q: "Netflix recommends your next movie. Which technology is most closely involved?", options: ["Data Encryption", "Cloud Backup", "Recommendation System", "Antivirus"], correct: 2 },
+            { q: "“Customers who bought X also bought Y” is an example of:", options: ["Association Rules", "Linear Regression", "Image Processing", "Data Encryption"], correct: 0 },
+            { q: "An e-commerce company uses past customer purchases to predict what a customer may buy next. This is an example of:", options: ["Data Entry", "Data Encryption", "Manual Reporting", "Predictive Analytics"], correct: 3 },
+            { q: "Spotify’s personalized playlists rely heavily on:", options: ["Manual Selection", "Data & Algorithms", "Random Selection", "Email Surveys"], correct: 1 },
+            { q: "Google Maps predicts traffic mainly using:", options: ["Location & Historical Data", "Weather Only", "Random Guesses", "Manual Counting"], correct: 0 },
+            { q: "Zomato/Swiggy showing restaurants based on your past orders is:", options: ["Compilation", "Data Entry", "Encryption", "Personalization"], correct: 3 },
+            { q: "Amazon showing “Recommended for You” products is primarily an example of:", options: ["Recommendation Analytics", "Data Cleaning", "Cybersecurity", "Payroll Processing"], correct: 0 },
+            { q: "A retail company analyzes customer purchase history to divide customers into groups. This is:", options: ["Data Encryption", "Customer Segmentation", "Data Entry", "Web Hosting"], correct: 1 },
+            { q: "An airline increases ticket prices when demand is very high. This is:", options: ["Data Cleaning", "Sentiment Analysis", "Data Compression", "Dynamic Pricing"], correct: 3 },
+            { q: "A company studies customer reviews to determine whether customers are happy or unhappy. This is:", options: ["Sentiment Analysis", "Regression", "Data Backup", "Network Routing"], correct: 0 },
+            { q: "ChatGPT is an example of:", options: ["Operating System", "Database", "Generative AI", "Antivirus"], correct: 2 },
+            { q: "Which company developed ChatGPT?", options: ["Google", "OpenAI", "Meta", "IBM"], correct: 1 },
+            { q: "A business uses AI to automatically summarize thousands of customer reviews. Which technology is most relevant?", options: ["Spreadsheet Formatting", "Data Compression", "Network Security", "Natural Language Processing"], correct: 3 },
+            { q: "Gemini is developed by:", options: ["Google", "Microsoft", "Amazon", "IBM"], correct: 0 },
+            { q: "Which tool is strongly associated with AI image generation?", options: ["MySQL", "Tableau", "Midjourney", "Excel"], correct: 2 },
+            { q: "GitHub Copilot is primarily an:", options: ["BI Dashboard", "AI Coding Assistant", "Database Engine", "Antivirus"], correct: 1 },
+            { q: "In Generative AI, a prompt is basically:", options: ["An Instruction", "A Database", "A Password", "A Programming Language"], correct: 0 },
+            { q: "A company uses AI to identify fraudulent credit-card transactions. This is primarily:", options: ["Data Visualization", "Data Entry", "File Compression", "Anomaly/Fraud Detection"], correct: 3 },
+            { q: "Which AI technique allows computers to learn patterns from historical data?", options: ["Word Processing", "Machine Learning", "File Management", "Web Designing"], correct: 1 },
+            { q: "An AI system that understands and generates human language mainly belongs to:", options: ["Computer Networking", "Database Administration", "Natural Language Processing", "Cloud Storage"], correct: 2 },
+            { q: "Which tool is primarily used for statistical computing and data analysis?", options: ["R", "Git", "Figma", "Notepad"], correct: 0 },
+            { q: "Tableau is best known for:", options: ["Video Editing", "Web Hosting", "Cybersecurity", "Data Visualization"], correct: 3 },
+            { q: "Which tool is commonly used to clean, manipulate, analyze and visualize data programmatically?", options: ["Python", "Photoshop", "Canva", "Figma"], correct: 0 },
+            { q: "Which language is primarily used to query relational databases?", options: ["Photoshop", "SQL", "Canva", "Figma"], correct: 1 },
+            { q: "Which Python library is famous for DataFrames?", options: ["Flask", "Django", "Selenium", "Pandas"], correct: 3 },
+            { q: "Which tool is strongly associated with statistical analysis?", options: ["SPSS", "Premiere Pro", "Figma", "Photoshop"], correct: 0 },
+            { q: "Which Python library is commonly used for numerical computation?", options: ["BeautifulSoup", "Flask", "NumPy", "Tkinter"], correct: 2 },
+            { q: "A company wants to create an interactive dashboard containing KPIs, charts and filters. Which tool is most suitable?", options: ["Notepad", "Power BI", "Git", "Calculator"], correct: 1 },
+            { q: "Which SQL command is used to retrieve data from a database?", options: ["SELECT", "DELETE", "DROP", "ALTER"], correct: 0 },
+            { q: "Which tool is commonly used to create visual reports and dashboards using drag-and-drop analytics?", options: ["MySQL", "GitHub", "Jupyter Kernel", "Tableau"], correct: 3 },
+            { q: "Which technique is best for discovering natural customer groups?", options: ["Linear Regression", "K-Means Clustering", "SQL JOIN", "Sorting"], correct: 1 },
+            { q: "A model performs great on training data but poorly on new data. This is:", options: ["Underfitting", "Overfitting", "Normalization", "Aggregation"], correct: 1 },
+            { q: "Predicting whether a customer will leave a company is called:", options: ["Classification", "Clustering", "Association", "Data Cleaning"], correct: 0 },
+            { q: "Predicting next month’s sales is:", options: ["Descriptive Analytics", "Diagnostic Analytics", "Predictive Analytics", "Prescriptive Analytics"], correct: 2 },
+            { q: "“What should the business do next?” is answered by:", options: ["Descriptive Analytics", "Diagnostic Analytics", "Predictive Analytics", "Prescriptive Analytics"], correct: 3 },
+            { q: "Which graph is usually best for showing sales trends over time?", options: ["Pie Chart", "Accuracy", "Line Chart", "Logo Chart"], correct: 2 },
+            { q: "Which metric measures the proportion of correct predictions out of all predictions?", options: ["Recall", "Accuracy", "Precision", "RMSE"], correct: 1 },
+            { q: "In a confusion matrix, a model predicts “positive” and the actual result is also “positive.” This is:", options: ["False Positive", "True Negative", "True Positive", "False Negative"], correct: 2 },
+            { q: "Which technique reduces the number of dimensions/features while retaining important information?", options: ["SQL JOIN", "K-Means", "One-Hot Encoding", "PCA"], correct: 3 },
+            { q: "Which learning approach uses labelled data to train a model?", options: ["Supervised Learning", "Unsupervised Learning", "Random Learning", "Manual Learning"], correct: 0 },
+            { q: "A company tests two versions of an app to see which gets more clicks. This is:", options: ["Data Mining", "A/B Testing", "Clustering", "Encryption"], correct: 1 },
+            { q: "A company has ₹10 lakh revenue and ₹7 lakh cost. What is its profit?", options: ["₹2 lakh", "₹3 lakh", "₹7 lakh", "₹17 lakh"], correct: 1 },
+            { q: "Which KPI is especially important for an e-commerce website?", options: ["Office Paint Cost", "Employee Shoe Size", "Number of Chairs", "Conversion Rate"], correct: 3 },
+            { q: "A company has millions of records but poor-quality data. The biggest risk is:", options: ["Poor Decisions", "Automatic Accuracy", "More Profit", "Faster Internet"], correct: 0 },
+            { q: "Netflix predicts what you may watch next. This is closest to:", options: ["Data Entry", "Predictive Analytics", "Accounting", "Data Encryption"], correct: 1 },
+            { q: "Your dashboard has 25 charts, but the manager understands nothing. The likely problem is:", options: ["Too Little Data", "Low RAM", "Poor Data Storytelling", "Not Enough Charts"], correct: 2 },
+            { q: "A company wants to understand why its sales dropped last month. Which type of analytics should it use?", options: ["Descriptive Analytics", "Diagnostic Analytics", "Predictive Analytics", "Prescriptive Analytics"], correct: 1 },
+            { q: "A company predicts that 20% of its customers may stop using its service next month. This is an example of:", options: ["Data Entry", "Data Encryption", "Data Visualization", "Churn Prediction"], correct: 3 },
+            { q: "A business dashboard shows Revenue = ₹50 lakh and Cost = ₹35 lakh. What is the profit margin?", options: ["15%", "20%", "30%", "70%"], correct: 2 },
+            { q: "A company uses customer data to recommend the best discount for each customer. This is closest to:", options: ["Prescriptive Analytics", "Descriptive Analytics", "Data Storage", "Data Entry"], correct: 0 }
+        ];
+
+        function initData() {
+            db.ref('participants').on('value', (snapshot) => {
+                participants = [];
+                snapshot.forEach((child) => {
+                    let user = child.val();
+                    user.firebaseKey = child.key; 
+                    participants.push(user);
+                });
+                
+                if (document.getElementById('main-dashboard').classList.contains('active')) {
+                    if (isAdmin) refreshAdminTab();
+                    else if (currentActiveTab === 'user-pos') renderUserPosTab();
+                }
+            });
+
+            db.ref('questions').once('value', (snapshot) => {
+                if (snapshot.exists()) {
+                    let existingQuestions = snapshot.val();
+                    // If old questions exist, overwrite with the new ones!
+                    if (existingQuestions.length !== 50 || existingQuestions[0].options.length !== 4) {
+                        db.ref('questions').set(defaultQuestions);
+                        questions = defaultQuestions;
+                    } else {
+                        questions = existingQuestions;
+                    }
+                } else {
+                    db.ref('questions').set(defaultQuestions);
+                    questions = defaultQuestions;
+                }
+            });
+        }
+
+        window.onload = initData;
+
+        function goToScreen(index) {
+            screens[currentScreen].classList.remove('active');
+            currentScreen = index;
+            screens[currentScreen].classList.add('active');
+        }
+
+        function toggleAdminMode() {
+            isAdminMode = !isAdminMode;
+            const studentBox = document.getElementById('studentLoginBox');
+            const adminBox = document.getElementById('adminLoginBox');
+            const text = document.getElementById('adminToggleText');
+
+            if (isAdminMode) {
+                studentBox.style.display = 'none';
+                adminBox.classList.add('active');
+                text.textContent = "v1.2 | Back to Student Login";
+            } else {
+                studentBox.style.display = 'block';
+                adminBox.classList.remove('active');
+                text.textContent = "v1.2 | Admin Access?";
+            }
+        }
+
+        async function login() {
+            if (isAdminMode) {
+                const adminUser = document.getElementById('adminUser').value.trim();
+                const adminPass = document.getElementById('adminPass').value.trim();
+
+                if (!adminUser || !adminPass) { alert("Please enter Admin credentials."); return; }
+                if (adminUser === atob(ADMIN_USER) && adminPass === atob(ADMIN_PASS)) {
+                    isAdmin = true;
+                    currentUser = { name: "Admin HQ", score: 0, rank: 99, qualified: true, approved: true };
+                    enterDashboard();
+                } else {
+                    alert("Invalid Admin Credentials.");
+                }
+            } else {
+                const teamName = document.getElementById('teamName').value.trim();
+                const leaderUid = document.getElementById('leaderUid').value.trim();
+                const leaderName = document.getElementById('leaderName').value.trim();
+                if (!teamName || !leaderUid || !leaderName) { alert("All fields are mandatory."); return; }
+                if (participants.length >= MAX_PARTICIPANTS) { alert("Maximum capacity of 100 participants has been reached."); return; }
+
+                isAdmin = false;
+                const newUser = { name: teamName, uid: leaderUid, leaderName: leaderName, score: 0, rank: participants.length + 1, qualified: true, approved: false };
+
+                const newRef = await db.ref('participants').push(newUser);
+                newUser.firebaseKey = newRef.key;
+                currentUser = newUser;
+                
+                enterDashboard();
+            }
+        }
+
+        function enterDashboard() {
+            currentActiveTab = isAdmin ? 'admin-pos' : 'user-pos';
+            document.getElementById('logoutBtn').style.display = 'block';
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById('main-dashboard').classList.add('active');
+            setupDashboardTabs();
+        }
+
+        function logout() {
+            isAdmin = false; currentUser = {}; isAdminMode = false;
+            document.getElementById('adminLoginBox').classList.remove('active');
+            document.getElementById('studentLoginBox').style.display = 'block';
+            document.getElementById('logoutBtn').style.display = 'none';
+            document.getElementById('main-dashboard').classList.remove('active');
+            document.getElementById('page-quiz').classList.remove('active');
+            document.getElementById('teamName').value = '';
+            document.getElementById('leaderUid').value = '';
+            document.getElementById('leaderName').value = '';
+            document.getElementById('adminUser').value = '';
+            document.getElementById('adminPass').value = '';
+            document.getElementById('adminToggleText').textContent = "v1.2 | Admin Access?";
+            if(timerInterval) clearInterval(timerInterval);
+            currentScreen = 0;
+            screens[0].classList.add('active');
+        }
+
+        function setupDashboardTabs() {
+            const tabNav = document.getElementById('tabNav');
+            tabNav.innerHTML = '';
+
+            if (isAdmin) {
+                tabNav.innerHTML = `
+                    <button class="tab-btn ${currentActiveTab === 'admin-pos' ? 'active' : ''}" onclick="switchTab('admin-pos', this)">My Position</button>
+                    <button class="tab-btn ${currentActiveTab === 'admin-controls' ? 'active' : ''}" onclick="switchTab('admin-controls', this)">Admin Controls</button>
+                    <button class="tab-btn ${currentActiveTab === 'admin-backend' ? 'active' : ''}" onclick="switchTab('admin-backend', this)">Backend Data</button>
+                    <button class="tab-btn ${currentActiveTab === 'admin-leadership' ? 'active' : ''}" onclick="switchTab('admin-leadership', this)">Leadership</button>
+                `;
+                let buttons = document.querySelectorAll('.tab-btn');
+                currentActiveBtnElement = buttons[['admin-pos', 'admin-controls', 'admin-backend', 'admin-leadership'].indexOf(currentActiveTab)];
+                switchTab(currentActiveTab, currentActiveBtnElement);
+            } else {
+                tabNav.innerHTML = `<button class="tab-btn active" onclick="switchTab('user-pos', this)">My Position</button>`;
+                switchTab('user-pos', tabNav.children[0]);
+            }
+        }
+
+        function refreshAdminTab() {
+            if (currentActiveTab === 'admin-controls') renderAdminControls();
+            else if (currentActiveTab === 'admin-backend') renderBackendData();
+            else if (currentActiveTab === 'admin-leadership') renderRankManager();
+        }
+
+        function renderUserPosTab() {
+            if (!currentUser) return;
+            let myData = participants.find(p => p.firebaseKey === currentUser.firebaseKey);
+            const content = document.getElementById('tabContent');
+
+            if (myData && !myData.approved) {
+                content.innerHTML = `<h2 style="color:var(--primary); margin-bottom:20px;">Queue Status</h2>
+                    <div class="info-card">
+                        <h3>Team: ${currentUser.name}</h3>
+                        <p class="queue-message">You are in the queue. Waiting for Admin Approval to enter the quiz...</p>
+                    </div>`;
+            } else {
+                let sorted = participants.filter(p => p.approved).sort((a, b) => a.rank - b.rank || b.score - a.score);
+                let myRank = sorted.findIndex(p => p.firebaseKey === currentUser.firebaseKey) + 1;
+                let qualMessage = (myData && !myData.qualified) ? `<div style="color:var(--red); font-weight:bold; margin-top:10px;">Did Not Qualify</div>` : '';
+
+                content.innerHTML = `<h2 style="color:var(--primary); margin-bottom:20px;">My Details & Position</h2>
+                    <div class="info-card">
+                        <h3>Team: ${currentUser.name}</h3>
+                        <div class="stat-box">${myData ? myData.score : 0} Points</div>
+                        <p style="font-size: 1.5rem; margin-top: 10px;">Current Rank: #${myRank > 0 ? myRank : 'N/A'}</p>
+                        ${qualMessage}
+                        <button class="btn" onclick="startQuiz()" style="margin-top:20px;">Start Quiz</button>
+                    </div>`;
+            }
+        }
+
+        function switchTab(tabName, btnElement) {
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            btnElement.classList.add('active');
+            currentActiveTab = tabName;
+            currentActiveBtnElement = btnElement;
+            const content = document.getElementById('tabContent');
+
+            if (tabName === 'admin-pos') {
+                content.innerHTML = `<h2 style="color:var(--primary); margin-bottom:20px;">Admin Control Center</h2><div class="info-card"><h3>Full capabilities unlocked.</h3></div>`;
+            } 
+            else if (tabName === 'user-pos') {
+                renderUserPosTab();
+            }
+            else if (tabName === 'admin-controls') {
+                content.innerHTML = `<h2 style="color:var(--primary); margin-bottom:20px;">Admin Controls</h2>
+                    <div class="info-card"><h3>Quiz Engine</h3>
+                        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                            <button class="btn btn-small" id="quizToggleBtn" onclick="toggleQuiz()">Start Quiz</button>
+                            <button class="btn btn-small btn-danger" onclick="stopQuiz()">Stop</button>
+                        </div>
+                        <div style="margin-top:15px; border-top:1px solid var(--border); padding-top:15px;">
+                            <label>Time per Question (sec):</label>
+                            <input type="number" id="timeInput" value="${timePerQuestion}" style="width:70px; padding:8px; background:black; color:white; border:1px solid var(--border); margin-top:5px;">
+                            <button class="btn btn-small" onclick="updateTime()">Update</button>
+                        </div>
+                    </div>
+                    <div class="info-card"><h3>Bulk Upload (CSV)</h3>
+                        <input type="file" id="csvUpload" accept=".csv" onchange="handleCSVUpload(event)" style="display:none;">
+                        <label for="csvUpload" class="csv-upload-btn">Choose CSV</label>
+                        <p style="color:#aaa; font-size:0.9rem; margin-top:10px;">Format: <code>Question, Opt 1, Opt 2, Opt 3, Opt 4, Correct Index (0-3)</code></p>
+                        <button class="btn btn-small btn-danger" onclick="resetQuestions()" style="margin-top:10px;">Reset to 4 Options</button>
+                    </div>
+                    <div class="info-card"><h3>Question Bank</h3><div id="questionAdminList"></div><button class="btn btn-small" onclick="addNewQuestion()" style="margin-top:10px;">+ Add Question</button></div>`;
+                renderAdminControls();
+            }
+            else if (tabName === 'admin-backend') {
+                content.innerHTML = `<h2 style="color:var(--primary); margin-bottom:20px;">Backend Participant Data</h2>
+                    <div style="display:flex; gap:10px; margin-bottom:20px;">
+                        <button class="btn btn-small btn-green" onclick="approveAllUsers()">Approve All</button>
+                        <button class="btn btn-small btn-danger" onclick="clearPendingUsers()">Clear Pending</button>
+                    </div>
+                    <div class="info-card"><h3>All Registered Teams</h3><div id="backendTable"></div></div>`;
+                renderBackendData();
+            }
+            else if (tabName === 'admin-leadership') {
+                content.innerHTML = `<h2 style="color:var(--gold); margin-bottom:20px;">Leadership Manager</h2><p style="color:#aaa; margin-bottom:20px;">Manually set ranks and qualification.</p><div id="rankManagerList"></div>`;
+                renderRankManager();
+            }
+        }
+
+        function renderAdminControls() {
+            let qHtml = "";
+            questions.forEach((q, index) => {
+                qHtml += `<div class="list-row"><span>${index+1}. ${q.q}</span><div class="list-actions"><button class="btn btn-small" style="border-color:var(--gold); color:var(--gold);" onclick="updateQuestion(${index})">Edit</button><button class="btn btn-small btn-danger" onclick="deleteQuestion(${index})">Del</button></div></div>`;
+            });
+            document.getElementById('questionAdminList').innerHTML = qHtml;
+        }
+
+        async function resetQuestions() {
+            if (!confirm("Reset all questions to the default 50 questions with 4 options?")) return;
+            await db.ref('questions').set(defaultQuestions);
+            questions = defaultQuestions;
+            renderAdminControls();
+            alert("Questions reset to 4 options!");
+        }
+
+        function renderBackendData() {
+            let tableHtml = `<table class="data-table"><tr><th>Team</th><th>UID</th><th>Leader</th><th>Score</th><th>Status</th><th>Actions</th></tr>`;
+            let sorted = participants.sort((a, b) => a.rank - b.rank || b.score - a.score);
+            sorted.forEach((p, index) => {
+                let status = p.approved ? 'Active' : 'Queue';
+                let actions = `<button class="btn btn-small btn-green" onclick="approveUserByIndex(${index})">Approve</button> <button class="btn btn-small btn-danger" onclick="deleteUserByIndex(${index})">X</button>`;
+                if (p.approved) actions = `<button class="btn btn-small btn-danger" onclick="deleteUserByIndex(${index})">X</button>`;
+
+                tableHtml += `<tr><td>${p.name}</td><td>${p.uid || 'N/A'}</td><td>${p.leaderName || 'N/A'}</td><td>${p.score}</td><td style="color:${p.approved ? 'var(--green)' : 'var(--gold)'};">${status}</td><td>${actions}</td></tr>`;
+            });
+            tableHtml += `</table>`;
+            document.getElementById('backendTable').innerHTML = tableHtml || "<p>No teams yet.</p>";
+        }
+
+        function renderRankManager() {
+            let rankList = participants.filter(p => p.approved).sort((a, b) => a.rank - b.rank || b.score - a.score);
+            let rHtml = "";
+            rankList.forEach((p, index) => {
+                let qualBtn = (p.qualified === false || p.score < 0) ? `<button class="btn btn-small btn-green" onclick="toggleQualifyByIndex(${index}, true)">Qualify</button>` : `<button class="btn btn-small btn-danger" onclick="toggleQualifyByIndex(${index}, false)">Disqualify</button>`;
+                rHtml += `<div class="list-row"><span><strong>#${index+1}:</strong> ${p.name} (${p.score} pts)</span><div class="list-actions"><button class="btn btn-small" onclick="moveRankByIndex(${index}, -1)">Up</button><button class="btn btn-small" onclick="moveRankByIndex(${index}, 1)">Down</button>${qualBtn}</div></div>`;
+            });
+            document.getElementById('rankManagerList').innerHTML = rHtml || "<p>No active teams to rank.</p>";
+        }
+
+        async function deleteUserByIndex(index) {
+            let user = participants[index];
+            if (!user) return;
+            if (!confirm("Are you sure you want to delete " + user.name + "?")) return;
+
+            if (user.firebaseKey) await db.ref('participants/' + user.firebaseKey).remove();
+            participants.splice(index, 1);
+            renderBackendData(); renderRankManager(); renderParticipantList();
+        }
+
+        async function approveUserByIndex(index) {
+            let user = participants[index];
+            if (user) {
+                user.approved = true;
+                if (user.firebaseKey) await db.ref('participants/' + user.firebaseKey).update({ approved: true });
+                renderBackendData();
+                alert(`${user.name} has been approved!`);
+            }
+        }
+
+        async function approveAllUsers() {
+            if (participants.length === 0) { alert("No users to approve."); return; }
+            let approvedCount = 0;
+            for (let i = 0; i < participants.length; i++) {
+                let user = participants[i];
+                if (!user.approved) {
+                    user.approved = true;
+                    if (user.firebaseKey) await db.ref('participants/' + user.firebaseKey).update({ approved: true });
+                    approvedCount++;
+                }
+            }
+            renderBackendData();
+            alert(`${approvedCount} users approved!`);
+        }
+
+        async function clearPendingUsers() {
+            if (!confirm("Are you sure you want to delete all pending users?")) return;
+            for (let i = participants.length - 1; i >= 0; i--) {
+                let user = participants[i];
+                if (!user.approved) {
+                    if (user.firebaseKey) await db.ref('participants/' + user.firebaseKey).remove();
+                    participants.splice(i, 1);
+                }
+            }
+            renderBackendData();
+            alert("Pending users removed!");
+        }
+
+        async function toggleQualifyByIndex(index, status) {
+            let user = participants[index];
+            if (user) {
+                user.qualified = status;
+                if (status === false) user.score = -1;
+                else if (user.score < 0) user.score = 0;
+                renderRankManager(); renderBackendData(); renderParticipantList();
+                if (user.firebaseKey) db.ref('participants/' + user.firebaseKey).update({ qualified: status, score: user.score });
+            }
+        }
+
+        async function moveRankByIndex(index, direction) {
+            let sorted = participants.filter(p => p.approved).sort((a, b) => a.rank - b.rank || b.score - a.score);
+            let newIndex = index + direction;
+            if (newIndex >= 0 && newIndex < sorted.length) {
+                let tempRank = sorted[index].rank;
+                sorted[index].rank = sorted[newIndex].rank;
+                sorted[newIndex].rank = tempRank;
+                renderRankManager(); renderBackendData(); renderParticipantList();
+                for (let p of sorted) {
+                    if (p.firebaseKey) db.ref('participants/' + p.firebaseKey).update({ rank: p.rank });
+                }
+            }
+        }
+
+        async function toggleQuiz() {
+            isQuizRunning = !isQuizRunning;
+            const btn = document.getElementById('quizToggleBtn');
+            if (btn) btn.textContent = isQuizRunning ? "Pause Quiz" : "Start Quiz";
+        }
+
+        function stopQuiz() {
+            isQuizRunning = false;
+            const btn = document.getElementById('quizToggleBtn');
+            if (btn) btn.textContent = "Start Quiz";
+        }
+
+        async function updateTime() {
+            timePerQuestion = parseInt(document.getElementById('timeInput').value) || 15;
+            await db.ref('settings').update({ timePerQuestion: timePerQuestion });
+            alert(`Time per question updated to ${timePerQuestion} seconds.`);
+        }
+
+        async function handleCSVUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = async function(e) {
+                const lines = e.target.result.split('\n');
+                for (let i = 0; i < lines.length; i++) {
+                    if (lines[i].trim() === '') continue;
+                    const parts = lines[i].split(',');
+                    if (parts.length >= 6) {
+                        questions.push({ 
+                            q: parts[0].trim(), 
+                            options: [parts[1].trim(), parts[2].trim(), parts[3].trim(), parts[4].trim()], 
+                            correct: parseInt(parts[5].trim()) 
+                        });
+                    }
+                }
+                await db.ref('questions').set(questions);
+                renderAdminControls();
+                alert('Questions uploaded!');
+            };
+            reader.readAsText(file);
+        }
+
+        async function addNewQuestion() {
+            let newQ = prompt("Enter new battle question:");
+            if(newQ) { 
+                let opt1 = prompt("Enter Option 1:");
+                let opt2 = prompt("Enter Option 2:");
+                let opt3 = prompt("Enter Option 3:");
+                let opt4 = prompt("Enter Option 4:");
+                let correct = prompt("Enter Correct Option Index (0-3):");
+                if(opt1 && opt2 && opt3 && opt4) {
+                    questions.push({ q: newQ, options: [opt1, opt2, opt3, opt4], correct: parseInt(correct) }); 
+                    await db.ref('questions').set(questions); 
+                    renderAdminControls(); 
+                } else {
+                    alert("All options are required!");
+                }
+            }
+        }
+
+        async function updateQuestion(index) {
+            let newQ = prompt("Update question:", questions[index].q);
+            if(newQ) { 
+                questions[index].q = newQ; 
+                await db.ref('questions').set(questions); 
+                renderAdminControls(); 
+            }
+        }
+
+        async function deleteQuestion(index) {
+            questions.splice(index, 1);
+            await db.ref('questions').set(questions);
+            renderAdminControls();
+        }
+
+        async function startQuiz() {
+            if (!currentUser || !currentUser.firebaseKey) {
+                alert("You are not logged in. Please log in again.");
+                return;
+            }
+            
+            if (questions.length === 0) {
+                const snapshot = await db.ref('questions').once('value');
+                if (snapshot.exists()) questions = snapshot.val();
+                else {
+                    questions = defaultQuestions;
+                    await db.ref('questions').set(questions);
+                }
+            }
+            
+            currentQuestionIndex = 0;
+            document.getElementById('main-dashboard').classList.remove('active');
+            goToScreen(3);
+            loadQuestion();
+        }
+
+        function loadQuestion() {
+            if (currentQuestionIndex >= questions.length) {
+                alert("Quiz Completed! Check your final score.");
+                document.getElementById('main-dashboard').classList.add('active');
+                setupDashboardTabs();
+                return;
+            }
+
+            const q = questions[currentQuestionIndex];
+            document.getElementById('questionText').textContent = q.q;
+            
+            const optionsHtml = q.options.map((opt, i) => 
+                `<button class="btn-option" id="opt${i}" onclick="checkAnswer(${i})">${opt}</button>`
+            ).join('');
+            
+            document.getElementById('answerOptions').innerHTML = optionsHtml;
+            document.querySelectorAll('.btn-option').forEach(btn => btn.classList.remove('correct', 'wrong'));
+
+            let timeLeft = timePerQuestion;
+            document.getElementById('quizTimer').textContent = timeLeft;
+            
+            if (timerInterval) clearInterval(timerInterval);
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                document.getElementById('quizTimer').textContent = timeLeft;
+                if (timeLeft <= 0) {
+                    clearInterval(timerInterval);
+                    setTimeout(() => { currentQuestionIndex++; loadQuestion(); }, 1000);
+                }
+            }, 1000);
+        }
+
+        function checkAnswer(index) {
+            clearInterval(timerInterval);
+            const q = questions[currentQuestionIndex];
+            const selectedBtn = document.getElementById(`opt${index}`);
+            const correctBtn = document.getElementById(`opt${q.correct}`);
+
+            selectedBtn.classList.add(index === q.correct ? 'correct' : 'wrong');
+            correctBtn.classList.add('correct');
+
+            let scoreChange = (index === q.correct) ? 5 : -2;
+
+            if (currentUser.firebaseKey) {
+                db.ref('participants/' + currentUser.firebaseKey).once('value', (snapshot) => {
+                    if (snapshot.exists()) {
+                        let currentScore = snapshot.val().score || 0;
+                        let newScore = currentScore + scoreChange;
+                        db.ref('participants/' + currentUser.firebaseKey).update({ score: newScore });
+                        currentUser.score = newScore;
+
+                        document.getElementById('liveScore').textContent = `Score: ${newScore}`;
+                        let sorted = participants.filter(p => p.approved).sort((a, b) => b.score - a.score);
+                        let myRank = sorted.findIndex(p => p.firebaseKey === currentUser.firebaseKey) + 1;
+                        document.getElementById('liveRank').textContent = `Rank: #${myRank > 0 ? myRank : 'N/A'}`;
+                    }
+                });
+            }
+
+            setTimeout(() => { currentQuestionIndex++; loadQuestion(); }, 1500);
+        }
+    </script>
+</body>
+</html>

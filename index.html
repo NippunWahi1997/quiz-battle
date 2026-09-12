@@ -1,0 +1,942 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Quiz Battle</title>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+    <style>
+        :root, body.theme-default {
+            --bg-dark: #0f172a;
+            --bg-panel: rgba(30, 41, 59, 0.7);
+            --primary: #00d4ff;
+            --secondary: #ff00aa;
+            --gold: #ffd700;
+            --silver: #c0c0c0;
+            --bronze: #cd7f32;
+            --red: #ef4444;
+            --green: #10b981;
+            --border: rgba(0, 212, 255, 0.3);
+            --bg-grad-1: #000428;
+            --bg-grad-2: #004e92;
+            --font: 'Segoe UI', system-ui, sans-serif;
+        }
+        /* ACTIVITY THEMES */
+        body.theme-analytics { --bg-dark:#030712; --bg-panel:rgba(15,23,42,.84); --primary:#22d3ee; --secondary:#8b5cf6; --border:rgba(34,211,238,.32); --bg-grad-1:#020617; --bg-grad-2:#172554; --theme-glow:rgba(34,211,238,.22); }
+        body.theme-finance { --bg-dark:#03120b; --bg-panel:rgba(6,32,22,.84); --primary:#34d399; --secondary:#fbbf24; --border:rgba(52,211,153,.32); --bg-grad-1:#02130c; --bg-grad-2:#064e3b; --theme-glow:rgba(52,211,153,.22); }
+        body.theme-banking { --bg-dark:#071329; --bg-panel:rgba(12,31,63,.86); --primary:#60a5fa; --secondary:#facc15; --border:rgba(96,165,250,.34); --bg-grad-1:#020617; --bg-grad-2:#1e3a8a; --theme-glow:rgba(96,165,250,.22); }
+        body.theme-healthcare { --bg-dark:#03191b; --bg-panel:rgba(8,43,47,.84); --primary:#2dd4bf; --secondary:#67e8f9; --border:rgba(45,212,191,.34); --bg-grad-1:#042f2e; --bg-grad-2:#075985; --theme-glow:rgba(45,212,191,.22); }
+        body.theme-ai { --bg-dark:#09051c; --bg-panel:rgba(30,20,65,.84); --primary:#a78bfa; --secondary:#22d3ee; --border:rgba(167,139,250,.34); --bg-grad-1:#09051c; --bg-grad-2:#312e81; --theme-glow:rgba(167,139,250,.22); }
+        body.theme-business { --bg-dark:#10151c; --bg-panel:rgba(28,37,50,.86); --primary:#38bdf8; --secondary:#fb923c; --border:rgba(56,189,248,.32); --bg-grad-1:#0f172a; --bg-grad-2:#164e63; --theme-glow:rgba(56,189,248,.22); }
+        body.theme-psychology { --bg-dark:#16091f; --bg-panel:rgba(45,18,60,.84); --primary:#c084fc; --secondary:#f472b6; --border:rgba(192,132,252,.34); --bg-grad-1:#1e0b2e; --bg-grad-2:#701a75; --theme-glow:rgba(192,132,252,.22); }
+        body.theme-marketing { --bg-dark:#1a0815; --bg-panel:rgba(60,15,42,.84); --primary:#f472b6; --secondary:#fb923c; --border:rgba(244,114,182,.34); --bg-grad-1:#4a044e; --bg-grad-2:#9a3412; --theme-glow:rgba(244,114,182,.22); }
+        body.theme-operations { --bg-dark:#0b1118; --bg-panel:rgba(25,36,48,.86); --primary:#f59e0b; --secondary:#38bdf8; --border:rgba(245,158,11,.32); --bg-grad-1:#111827; --bg-grad-2:#334155; --theme-glow:rgba(245,158,11,.22); }
+        body.theme-education { --bg-dark:#081127; --bg-panel:rgba(20,35,72,.84); --primary:#818cf8; --secondary:#facc15; --border:rgba(129,140,248,.34); --bg-grad-1:#0f172a; --bg-grad-2:#3730a3; --theme-glow:rgba(129,140,248,.22); }
+        body.theme-default { --theme-glow:rgba(0,212,255,.20); }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: var(--font); -webkit-tap-highlight-color: transparent; touch-action: manipulation; user-select: none; -webkit-user-select: none; }
+        body { background: var(--bg-dark); color: #fff; overflow: hidden; height: 100vh; height: 100dvh; width: 100vw; display: flex; justify-content: center; align-items: center; transition: background 0.5s; }
+        .bg-code { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; overflow: hidden; background: radial-gradient(circle at 20% 20%, var(--theme-glow), transparent 28%), radial-gradient(circle at 80% 80%, var(--theme-glow), transparent 30%), linear-gradient(135deg, var(--bg-grad-1), var(--bg-grad-2)); animation: gridMove 15s linear infinite; transition: background 0.7s; }
+        .bg-code::after { content: ""; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: repeating-linear-gradient(0deg, transparent, transparent 40px, var(--border) 40px, var(--border) 41px), repeating-linear-gradient(90deg, transparent, transparent 40px, var(--border) 40px, var(--border) 41px); opacity: 0.15; }
+
+        .theme-particles { position:fixed; inset:0; pointer-events:none; z-index:0; overflow:hidden; }
+        .theme-particle { position:absolute; color:var(--primary); opacity:.13; font-weight:900; font-size:clamp(18px,2.5vw,42px); text-shadow:0 0 18px var(--primary); animation: particleFloat linear infinite; user-select:none; }
+        @keyframes particleFloat { 0%{transform:translate3d(0,110vh,0) rotate(0deg);opacity:0} 10%{opacity:.13} 50%{transform:translate3d(35px,50vh,0) rotate(180deg)} 90%{opacity:.13} 100%{transform:translate3d(-25px,-15vh,0) rotate(360deg);opacity:0} }
+        .theme-badge { display:inline-flex; align-items:center; gap:8px; margin-top:12px; padding:7px 13px; border:1px solid var(--border); border-radius:999px; background:rgba(0,0,0,.2); color:var(--primary); font-size:.8rem; font-weight:800; letter-spacing:1px; }
+        .theme-btn { min-height:76px !important; flex-direction:column; text-align:center; transition:transform .25s, box-shadow .25s, background .25s !important; }
+        .theme-btn:hover { transform:translateY(-3px); box-shadow:0 8px 24px var(--theme-glow); }
+        .theme-icon { font-size:1.65rem; line-height:1; }
+        .theme-desc { display:block; color:#94a3b8; font-size:.68rem; font-weight:500; margin-top:2px; }
+        .theme-btn.active { box-shadow:0 0 20px var(--theme-glow); }
+        @keyframes gridMove { from { background-position: 0 0; } to { background-position: 0 50px; } }
+        .app-container { width: 100vw; height: 100vh; height: 100dvh; background: rgba(0, 10, 20, 0.85); border: 2px solid var(--border); box-shadow: 0 0 40px var(--border), inset 0 0 80px var(--theme-glow); display: flex; flex-direction: column; overflow: hidden; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
+        .browser-top { background: rgba(0,0,0,0.5); padding: 10px 20px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+        .top-bar-content { display: flex; align-items: center; gap: 10px; }
+        .dots { display: flex; gap: 5px; }
+        .dot { width: 12px; height: 12px; border-radius: 50%; }
+        .dot.red { background: #ff5f57; } .dot.yellow { background: #febc2e; } .dot.green { background: #28c840; }
+        .url-bar { flex: 1; background: rgba(0, 0, 0, 0.3); border: 1px solid var(--border); border-radius: 8px; padding: 6px 15px; color: #aaa; font-size: 0.8rem; text-align: center; }
+        .logout-btn { background: var(--red); color: #fff; border: none; border-radius: 8px; padding: 6px 15px; font-weight: bold; cursor: pointer; font-size: 0.8rem; display: none; }
+        .screens-wrapper { flex: 1; position: relative; overflow: hidden; }
+        .screen { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: none; flex-direction: column; justify-content: center; align-items: center; padding: 20px; text-align: center; z-index: 1; }
+        .screen.active { display: flex; z-index: 2; }
+        .title { font-size: 3rem; font-weight: 900; text-transform: uppercase; background: linear-gradient(90deg, var(--primary), #fff, var(--secondary), var(--primary)); background-size: 300% auto; -webkit-background-clip: text; -webkit-text-fill-color: transparent; animation: shine 4s linear infinite, floatY 3s infinite; }
+        @keyframes shine { to { background-position: 300% center; } }
+        @keyframes floatY { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+        .btn { width: 100%; max-width: 400px; padding: 14px; font-size: 1.1rem; font-weight: bold; border-radius: 12px; border: 2px solid var(--primary); background: transparent; color: var(--primary); cursor: pointer; transition: 0.3s; }
+        .btn:hover { background: var(--primary); color: #000; }
+        .btn-danger { border-color: var(--secondary); color: var(--secondary); }
+        .btn-small { padding: 8px 12px; font-size: 0.85rem; max-width: 100%; margin: 0 3px; }
+        .btn-green { border-color: var(--green); color: var(--green); }
+        .login-forms-container { display: flex; flex-direction: column; gap: 15px; width: 100%; max-width: 400px; align-items: center; }
+        .form-panel { width: 100%; padding: 15px; background: rgba(0, 0, 0, 0.3); border: 1px solid var(--border); border-radius: 12px; }
+        .form-panel.hidden { display: none; }
+        .input-group { width: 100%; margin-bottom: 10px; text-align: left; }
+        .input-group label { display: block; margin-bottom: 4px; color: var(--primary); font-weight: bold; font-size: 0.9rem; }
+        .input-group input { width: 100%; padding: 10px; background: rgba(0, 0, 0, 0.4); border: 1px solid var(--border); border-radius: 6px; color: #fff; font-size: 1rem; outline: none; text-transform: uppercase; }
+        .admin-toggle-text { color: #64748b; font-size: 0.8rem; margin-top: 15px; cursor: pointer; text-decoration: underline; }
+        .guideline-box { width: 100%; max-width: 500px; background: var(--bg-panel); border: 1px solid var(--border); border-radius: 15px; padding: 15px; text-align: left; margin-bottom: 15px; }
+        .guideline-box p { margin-bottom: 8px; border-bottom: 1px dashed var(--border); padding-bottom: 8px; font-size: 0.9rem; }
+        .dashboard { display: none; flex-direction: column; width: 100%; height: 100%; }
+        .dashboard.active { display: flex; }
+        .tab-nav { display: flex; justify-content: space-around; padding: 10px; background: rgba(0,0,0,0.3); border-bottom: 1px solid var(--border); flex-shrink: 0; }
+        .tab-btn { flex: 1; padding: 10px; background: none; border: none; color: #aaa; font-size: 0.95rem; font-weight: bold; cursor: pointer; border-bottom: 3px solid transparent; }
+        .tab-btn.active { color: var(--primary); border-bottom: 3px solid var(--primary); }
+        .tab-content { flex: 1; overflow-y: auto; padding: 15px; }
+        .info-card { background: var(--bg-panel); border: 1px solid var(--border); border-radius: 12px; padding: 15px; margin-bottom: 15px; }
+        .info-card h3 { color: var(--gold); margin-bottom: 10px; font-size: 1.1rem; }
+        .stat-box { font-size: 2.5rem; font-weight: 900; color: var(--primary); margin-bottom: 5px; }
+        .queue-message { color: #ffaa00; font-weight: bold; font-size: 1rem; margin-top: 15px; }
+        .waiting-message { color: var(--primary); font-weight: bold; font-size: 1.2rem; margin-top: 15px; }
+        .list-row { display: flex; justify-content: space-between; align-items: center; padding: 10px; background: rgba(255,255,255,0.05); border: 1px solid var(--border); border-radius: 8px; margin-bottom: 8px; font-size: 0.9rem; }
+        .list-actions { display: flex; gap: 5px; }
+        .csv-upload-btn { display: inline-block; padding: 8px; background: var(--primary); color: #000; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 0.9rem; }
+        .leaderboard-row { display: grid; grid-template-columns: 60px 1fr 100px 80px; align-items: center; padding: 12px 15px; background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 10px; margin-bottom: 8px; transition: all 0.3s; }
+        .leaderboard-row.rank-1 { background: linear-gradient(90deg, rgba(255, 215, 0, 0.2), rgba(255, 215, 0, 0.05)); border-color: var(--gold); box-shadow: 0 0 15px rgba(255, 215, 0, 0.3); }
+        .leaderboard-row.rank-2 { background: linear-gradient(90deg, rgba(192, 192, 192, 0.2), rgba(192, 192, 192, 0.05)); border-color: var(--silver); }
+        .leaderboard-row.rank-3 { background: linear-gradient(90deg, rgba(205, 127, 50, 0.2), rgba(205, 127, 50, 0.05)); border-color: var(--bronze); }
+        .lb-rank { font-size: 1.5rem; font-weight: 900; text-align: center; }
+        .lb-rank.gold { color: var(--gold); } .lb-rank.silver { color: var(--silver); } .lb-rank.bronze { color: var(--bronze); }
+        .lb-team { font-weight: bold; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .lb-score { font-weight: bold; color: var(--green); text-align: center; font-size: 1.1rem; }
+        .lb-status { font-size: 0.8rem; text-align: center; padding: 3px 6px; border-radius: 10px; }
+        .lb-status.active { background: rgba(16, 185, 129, 0.2); color: var(--green); }
+        .lb-status.queue { background: rgba(255, 170, 0, 0.2); color: #ffaa00; }
+        .live-badge { display: inline-block; background: var(--red); color: #fff; padding: 2px 8px; border-radius: 10px; font-size: 0.7rem; font-weight: bold; margin-left: 10px; animation: blink 1.5s infinite; }
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+        .quiz-container { width: 100%; max-width: 700px; position: relative; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 10px; padding-top: 40px; }
+        .quiz-score-display { position: absolute; top: 0; right: 0; background: var(--bg-panel); border: 1px solid var(--green); border-radius: 8px; padding: 6px 12px; font-weight: bold; color: var(--green); font-size: 0.9rem; }
+        .quiz-rank-display { position: absolute; top: 0; left: 0; background: var(--bg-panel); border: 1px solid var(--gold); border-radius: 8px; padding: 6px 12px; font-weight: bold; color: var(--gold); font-size: 0.9rem; }
+        .quiz-progress-display { position: absolute; top: 0; left: 50%; transform: translateX(-50%); background: var(--bg-panel); border: 1px solid var(--primary); border-radius: 8px; padding: 6px 12px; font-weight: bold; color: var(--primary); font-size: 0.9rem; }
+        .quiz-timer { width: 60px; height: 60px; border-radius: 50%; border: 4px solid var(--primary); display: flex; justify-content: center; align-items: center; font-size: 1.8rem; font-weight: bold; margin-top: 50px; color: var(--primary); background: rgba(0,0,0,0.5); }
+        .quiz-question { font-size: 1.15rem; padding: 12px 15px; background: var(--bg-panel); border: 1px solid var(--border); border-radius: 12px; text-align: left; width: 100%; }
+        .answer-options { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; width: 100%; }
+        .btn-option { background: rgba(0, 0, 0, 0.2); border: 2px solid var(--border); border-radius: 8px; color: #fff; cursor: pointer; font-size: 0.9rem; padding: 10px; text-align: left; }
+        .btn-option.correct { background: #28c840; border-color: #28c840; }
+        .btn-option.wrong { background: #ff3333; border-color: #ff3333; }
+        .data-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.9rem; }
+        .data-table th, .data-table td { padding: 6px; border: 1px solid var(--border); text-align: left; }
+        .data-table th { background: rgba(0, 0, 0, 0.3); color: var(--primary); }
+        .admin-actions { display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
+        .icon-btn { padding: 6px 10px; border-radius: 6px; cursor: pointer; font-size: 1rem; font-weight: bold; border: 2px solid; background: transparent; }
+        .icon-btn.approve { border-color: var(--green); color: var(--green); }
+        .icon-btn.approve:hover { background: var(--green); color: #000; }
+        .icon-btn.reject { border-color: var(--red); color: var(--red); }
+        .icon-btn.reject:hover { background: var(--red); color: #fff; }
+        .theme-selector { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+        .theme-btn { padding: 12px; border: 2px solid var(--border); border-radius: 8px; cursor: pointer; background: transparent; color: #fff; font-weight: bold; font-size: 0.85rem; display: flex; align-items: center; justify-content: center; gap: 8px; }
+        .theme-btn:hover { border-color: var(--primary); }
+        .theme-btn.active { border-color: var(--primary); background: rgba(0, 212, 255, 0.1); }
+        .theme-swatch { width: 20px; height: 20px; border-radius: 50%; }
+        @media (max-width: 768px) {
+            .tab-btn { font-size: 0.75rem; }
+            .quiz-question { font-size: 1rem; }
+            .answer-options { grid-template-columns: 1fr; }
+            .title { font-size: 2rem; }
+            .leaderboard-row { grid-template-columns: 50px 1fr 70px 60px; padding: 10px; }
+            .theme-selector { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body class="theme-default">
+    <div class="bg-code"><div class="theme-particles" id="themeParticles"></div></div>
+    <div class="app-container">
+        <div class="browser-top">
+            <div class="top-bar-content">
+                <div class="dots"><div class="dot red"></div><div class="dot yellow"></div><div class="dot green"></div></div>
+                <div class="url-bar">Quiz Battle Arena</div>
+                <button class="logout-btn" onclick="logout()" id="logoutBtn">[ LOGOUT ]</button>
+            </div>
+        </div>
+        <div class="screens-wrapper">
+            <div class="screen active" id="page-welcome">
+                <h1 class="title">Quiz Battle</h1>
+                <p id="activitySubtitle" style="color: #aaa; margin-top: 10px;">Banking, Finance & Insurance Quiz</p><div class="theme-badge" id="themeBadge">🏦 BANKING ARENA</div>
+                <button class="btn" onclick="showScreen('page-guidelines')" style="margin-top: 40px;">Enter Arena</button>
+            </div>
+            <div class="screen" id="page-guidelines">
+                <h2 style="font-size: 2rem; color: var(--primary); margin-bottom: 20px;">Battle Rules</h2>
+                <div class="guideline-box">
+                    <p><strong>Total Questions:</strong> 50</p>
+                    <p><strong>Time per Question:</strong> <span id="guidelineTime">15</span> Seconds</p>
+                    <p><strong>Options per Question:</strong> 4 Options (A, B, C, D)</p>
+                    <p><strong>Scoring:</strong> +5 Correct, -2 Wrong</p>
+                    <p><strong>Live Rank:</strong> Always based on current score</p>
+                </div>
+                <button class="btn" onclick="showScreen('page-login')">Proceed to Login</button>
+            </div>
+            <div class="screen" id="page-login">
+                <h2 style="font-size: 2rem; color: var(--primary); margin-bottom: 20px;">Enter the Battlefield</h2>
+                <div class="login-forms-container">
+                    <div id="studentLoginBox" class="form-panel">
+                        <div class="input-group"><label>Team Name</label><input type="text" id="teamName" placeholder="TEAM NAME"></div>
+                        <div class="input-group"><label>Student UID</label><input type="text" id="leaderUid" placeholder="UID"></div>
+                        <div class="input-group"><label>Team Leader Name</label><input type="text" id="leaderName" placeholder="LEADER NAME"></div>
+                        <div class="input-group"><label>Passcode</label><input type="text" id="passcode" placeholder="SET PASSCODE"></div>
+                    </div>
+                    <div id="adminLoginBox" class="form-panel hidden">
+                        <div class="input-group"><label>Admin Username</label><input type="text" id="adminUser" placeholder="USERNAME"></div>
+                        <div class="input-group"><label>Admin Password</label><input type="password" id="adminPass" placeholder="PASSWORD"></div>
+                    </div>
+                </div>
+                <button class="btn" onclick="login()" style="margin-top: 15px;">Initiate Battle</button>
+                <div class="admin-toggle-text" onclick="toggleAdminMode()" id="adminToggleText">v1.2 | Admin Access?</div>
+            </div>
+            <div class="screen" id="page-quiz">
+                <div class="quiz-container">
+                    <div class="quiz-score-display" id="liveScore">Score: 0</div>
+                    <div class="quiz-rank-display" id="liveRank">Rank: #1</div>
+                    <div class="quiz-progress-display" id="liveProgress">Question 1 / 50</div>
+                    <div class="quiz-timer" id="quizTimer">15</div>
+                    <div class="quiz-question" id="questionText">Loading Question...</div>
+                    <div class="answer-options" id="answerOptions"></div>
+                </div>
+            </div>
+            <div class="screen" id="page-next">
+                <h1 style="font-size: 3rem; margin-bottom: 20px; color: var(--primary);">Next Question</h1>
+                <p id="nextQuestionNum" style="font-size: 4rem; font-weight: 900; color: var(--gold);">Question 2</p>
+            </div>
+            <div class="screen" id="page-complete">
+                <div class="quiz-container">
+                    <h1 style="font-size: 2.5rem; margin-bottom: 20px; color: var(--gold);">Thank You For Participating!</h1>
+                    <div class="info-card" style="width: 100%;">
+                        <h3>Your Final Score: <span id="finalScore" style="color: var(--primary);">0</span></h3>
+                        <h3>Your Final Rank: <span id="finalRank" style="color: var(--gold);">#N/A</span></h3>
+                    </div>
+                    <button class="btn" onclick="logout()">[ LOGOUT ]</button>
+                </div>
+            </div>
+            <div class="dashboard" id="main-dashboard">
+                <div class="tab-nav" id="tabNav"></div>
+                <div class="tab-content" id="tabContent"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyBRVlyglVhaYbBWFwYa9jND1_1E8azc2SM",
+            authDomain: "quizbattle-cbff3.firebaseapp.com",
+            databaseURL: "https://quizbattle-cbff3-default-rtdb.firebaseio.com",
+            projectId: "quizbattle-cbff3",
+            storageBucket: "quizbattle-cbff3.firebasestorage.app",
+            messagingSenderId: "1023868373447",
+            appId: "1:1023868373447:web:25ab213cea1d8f286bb1e2"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
+        const ADMIN_USER = btoa("E18539");
+        const ADMIN_PASS = btoa("Oscar@080422");
+        const MAX_PARTICIPANTS = 100;
+
+        let isAdminMode = false;
+        let currentUser = {};
+        let isAdmin = false;
+        let participants = [];
+        let questions = [];
+        let timePerQuestion = 15;
+        let currentTheme = 'theme-default';
+        let currentQuestionIndex = 0;
+        let currentOrder = [];
+        let timerInterval;
+        let currentActiveTab = 'admin-pos';
+        let quizState = { status: 'waiting', currentQuestion: 0 };
+
+        const themes = [
+            { id:'theme-default', name:'Classic', icon:'⚡', color:'#00d4ff', desc:'Classic Quiz Battle', particles:['⚡','◆','★','?'] },
+            { id:'theme-analytics', name:'Analytics', icon:'📊', color:'#22d3ee', desc:'Data • BI • SQL', particles:['📊','📈','%','Σ','SQL','101','010','∑'] },
+            { id:'theme-finance', name:'Finance', icon:'💰', color:'#34d399', desc:'Markets • Investment', particles:['₹','$','€','₿','📈','📉','💰','%'] },
+            { id:'theme-banking', name:'Banking', icon:'🏦', color:'#60a5fa', desc:'Banking • Risk • Credit', particles:['🏦','💳','₹','ATM','▣','🔐','%','↗'] },
+            { id:'theme-healthcare', name:'Healthcare', icon:'🏥', color:'#2dd4bf', desc:'Health • Medical • Life', particles:['✚','♥','🩺','🧬','ECG','⚕','+','🫀'] },
+            { id:'theme-ai', name:'AI & Technology', icon:'🤖', color:'#a78bfa', desc:'AI • ML • Technology', particles:['AI','01','10','🤖','⌘','◉','∿','⚙'] },
+            { id:'theme-business', name:'Business', icon:'💼', color:'#38bdf8', desc:'Strategy • KPI • Growth', particles:['💼','KPI','↗','🎯','📋','₹','$','◆'] },
+            { id:'theme-psychology', name:'Psychology', icon:'🧠', color:'#c084fc', desc:'Mind • Behaviour • People', particles:['🧠','◉','☁','Ψ','∞','●','💭','✦'] },
+            { id:'theme-marketing', name:'Marketing', icon:'📣', color:'#f472b6', desc:'Brand • Digital • Media', particles:['📣','🎯','♥','@','#','▶','★','📱'] },
+            { id:'theme-operations', name:'Operations', icon:'⚙️', color:'#f59e0b', desc:'Process • Quality • Supply', particles:['⚙','↻','▣','✓','→','📦','⟳','⌁'] },
+            { id:'theme-education', name:'Education', icon:'🎓', color:'#818cf8', desc:'Learning • Knowledge • Skills', particles:['🎓','📚','✎','💡','A+','?','✓','ABC'] }
+        ];
+
+        let defaultQuestions = [
+            { q: "Which institution is primarily responsible for monetary policy in India?", options: ["RBI", "SEBI", "IRDAI", "PFRDA"], correct: 0 },
+            { q: "A bank has deposits of ₹100 crore and loans of ₹80 crore. What is its Loan-to-Deposit Ratio (LDR)?", options: ["20%", "80%", "100%", "125%"], correct: 1 },
+            { q: "What does NPA stand for in banking?", options: ["Net Profit Account", "Non-Performing Asset", "National Payment Account", "New Performing Asset"], correct: 1 },
+            { q: "Which of the following is an example of market risk?", options: ["Borrower default", "Interest rates or stock prices changing", "ATM failure", "Employee resignation"], correct: 1 },
+            { q: "A share price rises from ₹100 to ₹120. What is the percentage return?", options: ["10%", "15%", "20%", "25%"], correct: 2 },
+            { q: "What is the primary purpose of insurance?", options: ["To guarantee profits", "To transfer financial risk", "To increase taxes", "To eliminate all losses"], correct: 1 },
+            { q: "Which financial statement shows a company's assets and liabilities?", options: ["Income Statement", "Balance Sheet", "Cash Flow Statement", "Bank Reconciliation Statement"], correct: 1 },
+            { q: "What does CAR/CRAR primarily measure for a bank?", options: ["Employee productivity", "Capital adequacy relative to risk", "Customer satisfaction", "Deposit growth"], correct: 1 },
+            { q: "A company earns ₹10 lakh profit on ₹100 lakh revenue. What is its profit margin?", options: ["5%", "10%", "15%", "20%"], correct: 1 },
+            { q: "Which of the following is a liability for a bank?", options: ["Customer deposits", "Cash in vault", "Loans given", "Government securities owned"], correct: 0 },
+            { q: "A bank's lending is heavily concentrated in one large corporate group. Which risk increases most directly?", options: ["Credit concentration risk", "Foreign exchange risk", "Operational risk", "Reputational risk"], correct: 0 },
+            { q: "What is an insurance premium?", options: ["The amount paid for insurance coverage", "The amount received after a claim", "The insurer's profit", "A government tax"], correct: 0 },
+            { q: "If a company has equity of ₹50 lakh and liabilities of ₹450 lakh, what are its total assets?", options: ["₹400 lakh", "₹450 lakh", "₹500 lakh", "₹550 lakh"], correct: 2 },
+            { q: "What is liquidity risk?", options: ["Risk of losing employees", "Risk of being unable to meet obligations when due", "Risk of higher advertising costs", "Risk of accounting errors only"], correct: 1 },
+            { q: "Why is diversification used in investment management?", options: ["To increase concentration", "To reduce portfolio risk", "To eliminate taxes", "To guarantee returns"], correct: 1 },
+            { q: "A person pays an annual insurance premium of ₹2,000 for 5 years. How much is paid in total?", options: ["₹5,000", "₹7,000", "₹10,000", "₹12,000"], correct: 2 },
+            { q: "Which institution regulates the securities market in India?", options: ["RBI", "SEBI", "IRDAI", "PFRDA"], correct: 1 },
+            { q: "A bank has deposits of ₹1,000 crore and loans of ₹700 crore. If loans increase by ₹100 crore, what is the new LDR?", options: ["70%", "75%", "80%", "90%"], correct: 2 },
+            { q: "What is a bank run?", options: ["A sudden increase in bank profits", "Large-scale withdrawal of deposits by customers", "A bank's annual audit", "A rise in loan applications"], correct: 1 },
+            { q: "A portfolio has 60% invested in an asset returning 10% and 40% in an asset returning 5%. What is the portfolio return?", options: ["6%", "7%", "8%", "9%"], correct: 2 },
+            { q: "What is the primary purpose of a credit score?", options: ["To measure inflation", "To assess a borrower's creditworthiness", "To calculate insurance premiums", "To determine stock prices"], correct: 1 },
+            { q: "What is the purpose of reinsurance?", options: ["To insure the insurer against risk", "To increase customer deposits", "To regulate banks", "To eliminate premiums"], correct: 0 },
+            { q: "A stock priced at ₹200 falls by 10%. What is its new price?", options: ["₹180", "₹185", "₹190", "₹195"], correct: 0 },
+            { q: "Current assets are ₹200 lakh and current liabilities are ₹100 lakh. What is the current ratio?", options: ["0.5:1", "1:1", "2:1", "3:1"], correct: 2 },
+            { q: "What does ROI stand for?", options: ["Rate of Inflation", "Return on Investment", "Risk on Insurance", "Revenue on Income"], correct: 1 },
+            { q: "A bank has total loans of ₹1,000 crore and NPAs of ₹50 crore. What is the Gross NPA ratio?", options: ["2%", "5%", "10%", "20%"], correct: 1 },
+            { q: "Which of the following is a fixed-income security?", options: ["Equity share", "Corporate bond", "Common stock", "Equity mutual fund"], correct: 1 },
+            { q: "What is moral hazard in insurance?", options: ["Risk arising because insured behavior may become less cautious after obtaining coverage", "Risk of inflation", "Risk of currency depreciation", "Risk of stock market closure"], correct: 0 },
+            { q: "What does EMI stand for?", options: ["Equated Monthly Instalment", "Estimated Market Investment", "Equity Monthly Income", "External Monetary Indicator"], correct: 0 },
+            { q: "A bond with a face value of ₹1,000 pays ₹80 annual interest. What is its coupon yield on face value?", options: ["5%", "8%", "10%", "12%"], correct: 1 },
+            { q: "Insurance covering damage to a vehicle is generally called what?", options: ["Life insurance", "Motor insurance", "Marine insurance", "Property insurance"], correct: 1 },
+            { q: "A bank has deposits of ₹800 crore and loans of ₹600 crore. Deposits rise by ₹100 crore and loans rise by ₹50 crore. What is the new LDR?", options: ["65%", "68%", "72%", "75%"], correct: 2 },
+            { q: "A borrower fails to repay a loan. This is primarily what type of risk for the bank?", options: ["Credit risk", "Market risk", "Liquidity risk", "Operational risk"], correct: 0 },
+            { q: "A bank has assets with an average duration of 5 years and liabilities with an average duration of 2 years. If interest rates rise, which risk becomes important?", options: ["Duration/interest-rate risk", "Insurance risk", "Fraud risk", "Settlement risk"], correct: 0 },
+            { q: "What does IPO stand for?", options: ["Initial Public Offering", "International Payment Order", "Internal Profit Objective", "Investment Protection Option"], correct: 0 },
+            { q: "The principle requiring an insurance proposer and insurer to disclose material facts is known as:", options: ["Indemnity", "Utmost good faith", "Subrogation", "Contribution"], correct: 1 },
+            { q: "A stock worth ₹100 rises 20% and then falls 20%. What is its final value?", options: ["₹96", "₹98", "₹100", "₹104"], correct: 0 },
+            { q: "What does Value at Risk (VaR) estimate?", options: ["Maximum expected loss over a specified period at a given confidence level", "Guaranteed investment return", "Annual insurance premium", "Total bank deposits"], correct: 0 },
+            { q: "Which institution is India's central bank?", options: ["SBI", "RBI", "SEBI", "NABARD"], correct: 1 },
+            { q: "A bank's loan portfolio grows by 30% while deposits grow by only 5%. What risk is most likely to increase?", options: ["Liquidity/funding risk", "Inflation risk", "Insurance risk", "Currency risk"], correct: 0 },
+            { q: "What is adverse selection in insurance?", options: ["High-risk individuals being more likely to seek insurance coverage", "Insurers refusing all claims", "Banks increasing interest rates", "Customers paying premiums early"], correct: 0 },
+            { q: "Market capitalization of a company is calculated as:", options: ["Share price × number of outstanding shares", "Profit × revenue", "Assets − liabilities", "Revenue ÷ expenses"], correct: 0 },
+            { q: "A portfolio earns 12%, the risk-free rate is 4%, and standard deviation is 8%. What is the Sharpe ratio?", options: ["0.5", "1", "1.5", "2"], correct: 1 },
+            { q: "Which is an example of interest-rate risk in banking?", options: ["Loan defaults due to unemployment", "Bond values changing when interest rates change", "ATM cash shortage", "Customer identity theft"], correct: 1 },
+            { q: "What is inflation?", options: ["A sustained increase in the general price level", "A fall in all asset prices", "A rise in unemployment only", "A fall in money supply only"], correct: 0 },
+            { q: "A bank has loans of ₹2,000 crore. Its NPA ratio rises from 5% to 10%. By how much does the NPA amount increase?", options: ["₹50 crore", "₹75 crore", "₹100 crore", "₹150 crore"], correct: 2 },
+            { q: "What is an insurance deductible?", options: ["The portion of a covered loss paid by the policyholder before the insurer pays", "The insurer's profit", "The annual premium", "The policy maturity value"], correct: 0 },
+            { q: "A bank experiences withdrawals equal to 20% of its deposits but does not have enough liquid assets. What is the most likely sequence?", options: ["Liquidity pressure → asset sales/funding need → possible confidence crisis", "Profit increase → dividend increase", "Lower withdrawals → higher liquidity", "Higher deposits → lower risk"], correct: 0 },
+            { q: "What is systemic risk?", options: ["Risk that problems in one institution or market can spread and threaten the broader financial system", "Risk of one employee leaving", "Risk of a single stock falling", "Risk of a small accounting error"], correct: 0 },
+            { q: "An insurer has admissible assets of ₹600 crore and liabilities of ₹400 crore. If the required solvency margin is ₹100 crore, what is its solvency ratio?", options: ["100%", "150%", "200%", "250%"], correct: 2 }
+        ];
+
+        function showScreen(id) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById('main-dashboard').classList.remove('active');
+            document.getElementById(id).classList.add('active');
+        }
+
+        function applyTheme(themeId) {
+            document.body.className = themeId;
+            currentTheme = themeId;
+            const theme = themes.find(t => t.id === themeId) || themes[0];
+            const particles = document.getElementById('themeParticles');
+            if (particles) {
+                particles.innerHTML = '';
+                const items = theme.particles || ['◆','★','?'];
+                for (let i = 0; i < 28; i++) {
+                    const el = document.createElement('span');
+                    el.className = 'theme-particle';
+                    el.textContent = items[i % items.length];
+                    el.style.left = (Math.random()*100) + '%';
+                    el.style.animationDuration = (12 + Math.random()*18) + 's';
+                    el.style.animationDelay = (-Math.random()*20) + 's';
+                    el.style.fontSize = (16 + Math.random()*25) + 'px';
+                    particles.appendChild(el);
+                }
+            }
+            const badge = document.getElementById('themeBadge');
+            const subtitle = document.getElementById('activitySubtitle');
+            if (badge) badge.innerHTML = `${theme.icon} ${theme.name.toUpperCase()} ARENA`;
+            if (subtitle) subtitle.textContent = theme.desc;
+            document.title = `${theme.name} Quiz Battle`;
+        }
+
+        function initData() {
+            // Listen to quiz state
+            db.ref('quizState').on('value', (snapshot) => {
+                if (snapshot.exists()) { quizState = snapshot.val(); handleGlobalState(); }
+                else { db.ref('quizState').set({ status: 'waiting', currentQuestion: 0 }); }
+            });
+
+            // ** Listen to global settings (time + theme) **
+            db.ref('settings').on('value', (snapshot) => {
+                if (snapshot.exists()) {
+                    let s = snapshot.val();
+                    if (s.timePerQuestion) {
+                        timePerQuestion = s.timePerQuestion;
+                        document.getElementById('guidelineTime').textContent = timePerQuestion;
+                        // If admin is on the time input field, update it
+                        let timeInput = document.getElementById('timeInput');
+                        if (timeInput && document.activeElement !== timeInput) {
+                            timeInput.value = timePerQuestion;
+                        }
+                    }
+                    if (s.theme) applyTheme(s.theme);
+                }
+            });
+
+            // Listen to participants
+            db.ref('participants').on('value', (snapshot) => {
+                participants = [];
+                snapshot.forEach((child) => { let user = child.val(); user.firebaseKey = child.key; participants.push(user); });
+
+                if (isAdmin && document.getElementById('main-dashboard').classList.contains('active')) {
+                    refreshAdminTab();
+                }
+                if (!isAdmin && currentUser && currentUser.firebaseKey) {
+                    let fresh = participants.find(p => p.firebaseKey === currentUser.firebaseKey);
+                    if (fresh) currentUser = { ...currentUser, ...fresh };
+
+                    if (document.getElementById('main-dashboard').classList.contains('active') && currentActiveTab === 'user-pos') {
+                        renderUserPosTab();
+                    }
+                    if (document.getElementById('page-quiz').classList.contains('active')) {
+                        updateQuizHeaderStats();
+                    }
+                }
+            });
+
+            // Load/validate questions
+            db.ref('questions').once('value', (snapshot) => {
+                let valid = false;
+                if (snapshot.exists()) {
+                    let ex = snapshot.val();
+                    if (Array.isArray(ex) && ex.length === 50 && ex[0].options && ex[0].options.length === 4) {
+                        if (ex[0].q && ex[0].q.toLowerCase().includes("monetary policy in india")) {
+                            questions = ex; valid = true;
+                        }
+                    }
+                }
+                if (!valid) {
+                    db.ref('questions').set(defaultQuestions);
+                    questions = defaultQuestions;
+                }
+            });
+        }
+        window.onload = initData;
+
+        function calculateLiveRank(userKey) {
+            let approved = participants.filter(p => p.approved);
+            approved.sort((a, b) => (b.score || 0) - (a.score || 0));
+            let rank = approved.findIndex(p => p.firebaseKey === userKey) + 1;
+            return rank > 0 ? rank : 'N/A';
+        }
+
+        function updateQuizHeaderStats() {
+            if (!currentUser || !currentUser.firebaseKey) return;
+            document.getElementById('liveScore').textContent = `Score: ${currentUser.score || 0}`;
+            let r = calculateLiveRank(currentUser.firebaseKey);
+            document.getElementById('liveRank').textContent = `Rank: #${r}`;
+        }
+
+        function handleGlobalState() {
+            if (!isAdmin && currentUser.firebaseKey) {
+                if (document.getElementById('main-dashboard').classList.contains('active')) {
+                    if (currentActiveTab === 'user-pos') renderUserPosTab();
+                }
+                if (document.getElementById('page-quiz').classList.contains('active')) {
+                    if (quizState.status === 'paused') clearInterval(timerInterval);
+                    else if (quizState.status === 'ended') showCompletionScreen();
+                }
+            }
+        }
+
+        function toggleAdminMode() {
+            isAdminMode = !isAdminMode;
+            const sb = document.getElementById('studentLoginBox');
+            const ab = document.getElementById('adminLoginBox');
+            const t = document.getElementById('adminToggleText');
+            if (isAdminMode) { sb.classList.add('hidden'); ab.classList.remove('hidden'); t.textContent = "v1.2 | Back to Student Login"; }
+            else { sb.classList.remove('hidden'); ab.classList.add('hidden'); t.textContent = "v1.2 | Admin Access?"; }
+        }
+
+        async function login() {
+            if (isAdminMode) {
+                const au = document.getElementById('adminUser').value.trim().toUpperCase();
+                const ap = document.getElementById('adminPass').value.trim();
+                if (!au || !ap) { alert("Please enter Admin credentials."); return; }
+                if (au === atob(ADMIN_USER) && ap === atob(ADMIN_PASS)) {
+                    isAdmin = true; currentUser = { name: "Admin HQ", score: 0, rank: 99 }; enterDashboard();
+                } else alert("Invalid Admin Credentials.");
+            } else {
+                const tn = document.getElementById('teamName').value.trim().toUpperCase();
+                const uid = document.getElementById('leaderUid').value.trim().toUpperCase();
+                const ln = document.getElementById('leaderName').value.trim().toUpperCase();
+                const pc = document.getElementById('passcode').value.trim();
+                if (!tn || !uid || !ln || !pc) { alert("All fields including Passcode are mandatory."); return; }
+
+                let snap = await db.ref('participants').orderByChild('name').equalTo(tn).once('value');
+                if (snap.exists()) {
+                    let data, key;
+                    snap.forEach(c => { key = c.key; data = c.val(); });
+                    if (data.passcode === pc) { currentUser = data; currentUser.firebaseKey = key; enterDashboard(); return; }
+                    else { alert("User already exists. Passcode incorrect."); return; }
+                }
+                if (participants.length >= MAX_PARTICIPANTS) { alert("Max capacity reached."); return; }
+                isAdmin = false;
+                const nu = { name: tn, uid: uid, leaderName: ln, passcode: pc, score: 0, rank: participants.length + 1, qualified: true, approved: false, currentQuestion: 0, questionOrder: [] };
+                const nr = await db.ref('participants').push(nu);
+                nu.firebaseKey = nr.key; currentUser = nu; enterDashboard();
+            }
+        }
+
+        function enterDashboard() {
+            currentActiveTab = isAdmin ? 'admin-pos' : 'user-pos';
+            document.getElementById('logoutBtn').style.display = 'block';
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById('main-dashboard').classList.add('active');
+            setupDashboardTabs();
+        }
+
+        function logout() {
+            isAdmin = false; currentUser = {}; isAdminMode = false;
+            document.getElementById('adminLoginBox').classList.add('hidden');
+            document.getElementById('studentLoginBox').classList.remove('hidden');
+            document.getElementById('logoutBtn').style.display = 'none';
+            document.getElementById('main-dashboard').classList.remove('active');
+            document.getElementById('teamName').value = ''; document.getElementById('leaderUid').value = '';
+            document.getElementById('leaderName').value = ''; document.getElementById('passcode').value = '';
+            document.getElementById('adminUser').value = ''; document.getElementById('adminPass').value = '';
+            document.getElementById('adminToggleText').textContent = "v1.2 | Admin Access?";
+            if (timerInterval) clearInterval(timerInterval);
+            showScreen('page-welcome');
+        }
+
+        function setupDashboardTabs() {
+            const tabNav = document.getElementById('tabNav'); tabNav.innerHTML = '';
+            if (isAdmin) {
+                tabNav.innerHTML = `<button class="tab-btn ${currentActiveTab === 'admin-pos' ? 'active' : ''}" onclick="switchTab('admin-pos', this)">My Position</button><button class="tab-btn ${currentActiveTab === 'admin-controls' ? 'active' : ''}" onclick="switchTab('admin-controls', this)">Admin Controls</button><button class="tab-btn ${currentActiveTab === 'admin-backend' ? 'active' : ''}" onclick="switchTab('admin-backend', this)">Teams</button><button class="tab-btn ${currentActiveTab === 'admin-leadership' ? 'active' : ''}" onclick="switchTab('admin-leadership', this)">🏆 Leaderboard</button>`;
+                let buttons = document.querySelectorAll('.tab-btn');
+                switchTab(currentActiveTab, buttons[['admin-pos', 'admin-controls', 'admin-backend', 'admin-leadership'].indexOf(currentActiveTab)]);
+            } else {
+                tabNav.innerHTML = `<button class="tab-btn active" onclick="switchTab('user-pos', this)">My Position</button>`;
+                switchTab('user-pos', tabNav.children[0]);
+            }
+        }
+
+        function refreshAdminTab() {
+            if (currentActiveTab === 'admin-controls') renderAdminControls();
+            else if (currentActiveTab === 'admin-backend') renderBackendData();
+            else if (currentActiveTab === 'admin-leadership') { renderLeaderboard(); renderRankManager(); }
+            else if (currentActiveTab === 'admin-pos') renderAdminPos();
+        }
+
+        function renderAdminPos() {
+            const content = document.getElementById('tabContent');
+            let totalApproved = participants.filter(p => p.approved).length;
+            let totalQueue = participants.filter(p => !p.approved).length;
+            let topScore = 0;
+            participants.filter(p => p.approved).forEach(p => { if ((p.score || 0) > topScore) topScore = p.score; });
+            content.innerHTML = `
+                <h2 style="color:var(--primary); margin-bottom:20px;">Admin Control Center</h2>
+                <div class="info-card">
+                    <h3>Live Stats</h3>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px;">
+                        <div style="text-align: center; padding: 15px; background: rgba(0, 212, 255, 0.1); border-radius: 10px;">
+                            <div style="font-size: 2.5rem; font-weight: 900; color: var(--primary);">${totalApproved}</div>
+                            <div style="color: #aaa; font-size: 0.9rem;">Active Players</div>
+                        </div>
+                        <div style="text-align: center; padding: 15px; background: rgba(255, 170, 0, 0.1); border-radius: 10px;">
+                            <div style="font-size: 2.5rem; font-weight: 900; color: #ffaa00;">${totalQueue}</div>
+                            <div style="color: #aaa; font-size: 0.9rem;">In Queue</div>
+                        </div>
+                        <div style="text-align: center; padding: 15px; background: rgba(16, 185, 129, 0.1); border-radius: 10px;">
+                            <div style="font-size: 2.5rem; font-weight: 900; color: var(--green);">${topScore}</div>
+                            <div style="color: #aaa; font-size: 0.9rem;">Top Score</div>
+                        </div>
+                        <div style="text-align: center; padding: 15px; background: rgba(255, 215, 0, 0.1); border-radius: 10px;">
+                            <div style="font-size: 1.2rem; font-weight: 900; color: var(--gold);">${quizState.status.toUpperCase()}</div>
+                            <div style="color: #aaa; font-size: 0.9rem;">Quiz Status</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderUserPosTab() {
+            if (!currentUser) return;
+            let myData = participants.find(p => p.firebaseKey === currentUser.firebaseKey);
+            const content = document.getElementById('tabContent');
+            if (myData && !myData.approved) {
+                content.innerHTML = `<h2 style="color:var(--primary); margin-bottom:20px;">Queue Status</h2><div class="info-card"><h3>Team: ${currentUser.name}</h3><p class="queue-message">Waiting for Admin Approval...</p></div>`;
+            } else {
+                let liveRank = calculateLiveRank(currentUser.firebaseKey);
+                let qualMessage = (myData && !myData.qualified) ? `<div style="color:var(--red); font-weight:bold; margin-top:10px;">Did Not Qualify</div>` : '';
+                let startBtn = (quizState.status === 'active') ? `<button class="btn" onclick="startQuiz()" style="margin-top:20px;">Start / Resume Quiz</button>` : `<p class="waiting-message">Waiting for Admin to start the Quiz...</p>`;
+                content.innerHTML = `
+                    <h2 style="color:var(--primary); margin-bottom:20px;">My Details & Live Position</h2>
+                    <div class="info-card">
+                        <h3>Team: ${currentUser.name}</h3>
+                        <div class="stat-box">${myData ? myData.score : 0} Points</div>
+                        <p style="font-size: 1.5rem; margin-top: 10px;">Current Live Rank: <strong style="color: var(--gold);">#${liveRank}</strong></p>
+                        ${qualMessage}
+                        ${startBtn}
+                    </div>
+                `;
+            }
+        }
+
+        function switchTab(tabName, btnElement) {
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            btnElement.classList.add('active');
+            currentActiveTab = tabName;
+            const content = document.getElementById('tabContent');
+            if (tabName === 'admin-pos') { renderAdminPos(); }
+            else if (tabName === 'user-pos') { renderUserPosTab(); }
+            else if (tabName === 'admin-controls') {
+                content.innerHTML = `<h2 style="color:var(--primary); margin-bottom:20px;">Quiz Controls</h2>
+                    <div class="info-card"><h3>Global Quiz Engine</h3>
+                        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                            <button class="btn btn-small btn-green" onclick="startGlobalQuiz()">Start Quiz</button>
+                            <button class="btn btn-small btn-danger" onclick="pauseGlobalQuiz()">Pause</button>
+                            <button class="btn btn-small btn-danger" onclick="endGlobalQuiz()">End Quiz</button>
+                        </div>
+                        <p style="margin-top:10px; font-weight:bold;">Status: <span style="color: var(--gold);">${quizState.status.toUpperCase()}</span></p>
+                    </div>
+                    <div class="info-card"><h3>Time per Question (sec)</h3>
+                        <div style="display:flex; gap:10px; align-items:center;">
+                            <input type="number" id="timeInput" value="${timePerQuestion}" style="width:80px; padding:8px; background:black; color:white; border:1px solid var(--border);">
+                            <button class="btn btn-small btn-green" onclick="updateTime()">Update Time</button>
+                            <span id="timeStatus" style="color: var(--green); font-size: 0.85rem;"></span>
+                        </div>
+                        <p style="color: #aaa; font-size: 0.8rem; margin-top: 8px;">Current: ${timePerQuestion}s (synced to all users & guidelines)</p>
+                    </div>
+                    <div class="info-card"><h3>🎨 Theme Selector</h3>
+                        <p style="color:#aaa; font-size:0.85rem; margin-bottom: 10px;">Current: <span style="color: var(--primary); font-weight: bold;">${themes.find(t => t.id === currentTheme)?.name || 'Default'}</span></p>
+                        <div class="theme-selector" id="themeSelector">
+                            ${themes.map(t => `<button class="theme-btn ${t.id === currentTheme ? 'active' : ''}" onclick="setTheme('${t.id}', this)"><span class="theme-icon">${t.icon}</span><span>${t.name}</span><span class="theme-desc">${t.desc}</span></button>`).join('')}
+                        </div>
+                    </div>
+                    <div class="info-card"><h3>Bulk Upload (CSV/TSV)</h3>
+                        <input type="file" id="csvUpload" accept=".csv,.tsv,.txt" onchange="handleCSVUpload(event)" style="display:none;">
+                        <label for="csvUpload" class="csv-upload-btn">📁 Choose CSV / TSV File</label>
+                        <p style="color:#aaa; font-size:0.85rem; margin-top:10px;">Format: <br><code>Question, Opt1, Opt2, Opt3, Opt4, CorrectIndex (0-3)</code><br>Auto-detects Tab or Comma separator.</p>
+                        <button class="btn btn-small btn-danger" onclick="resetQuestions()" style="margin-top:10px;">Reset to Default Banking Questions</button>
+                    </div>
+                    <div class="info-card"><h3>Question Bank (${questions.length} loaded)</h3><div id="questionAdminList"></div></div>`;
+                renderAdminControls();
+            }
+            else if (tabName === 'admin-backend') {
+                content.innerHTML = `<h2 style="color:var(--primary); margin-bottom:20px;">Teams Manager</h2>
+                    <div class="admin-actions">
+                        <button class="btn btn-small btn-green" onclick="approveAllUsers()">✅ Approve All Users</button>
+                        <button class="btn btn-small" onclick="exportData()">📥 Export Data</button>
+                    </div>
+                    <div class="info-card"><h3>All Teams</h3><div id="backendTable"></div></div>
+                    <div class="admin-actions" style="margin-top: 20px; justify-content: center;">
+                        <button class="btn btn-small btn-danger" onclick="clearAllUsers()">🗑 Clear All Users</button>
+                    </div>`;
+                renderBackendData();
+            }
+            else if (tabName === 'admin-leadership') {
+                content.innerHTML = `<h2 style="color:var(--gold); margin-bottom:20px;">🏆 Live Leaderboard <span class="live-badge">LIVE</span></h2>
+                    <div id="leaderboardContainer"></div>
+                    <div class="info-card" style="margin-top: 20px;">
+                        <h3>Manual Rank Override (Optional)</h3>
+                        <p style="color:#aaa; font-size:0.85rem; margin-bottom: 10px;">Display only — live score rank always applies to users.</p>
+                        <div id="rankManagerList"></div>
+                    </div>`;
+                renderLeaderboard();
+                renderRankManager();
+            }
+        }
+
+        async function setTheme(themeId, button) {
+            await db.ref('settings').update({ theme: themeId });
+            applyTheme(themeId);
+            document.querySelectorAll('.theme-btn').forEach(b => b.classList.remove('active'));
+            if (button) button.classList.add('active');
+            const theme = themes.find(t => t.id === themeId);
+            const status = document.getElementById('timeStatus');
+            if (status) status.textContent = `${theme?.icon || ''} ${theme?.name || 'Theme'} applied`;
+        }
+
+        function renderLeaderboard() {
+            const container = document.getElementById('leaderboardContainer');
+            if (!container) return;
+            let approved = participants.filter(p => p.approved);
+            if (approved.length === 0) {
+                container.innerHTML = `<div class="info-card"><p style="color: #aaa;">No approved players yet. Approve some users to see the leaderboard.</p></div>`;
+                return;
+            }
+            approved.sort((a, b) => (b.score || 0) - (a.score || 0));
+            let html = `<div class="info-card">`;
+            approved.forEach((p, i) => {
+                let rankClass = i === 0 ? 'rank-1' : i === 1 ? 'rank-2' : i === 2 ? 'rank-3' : '';
+                let rankColor = i === 0 ? 'gold' : i === 1 ? 'silver' : i === 2 ? 'bronze' : '';
+                let medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : '';
+                html += `<div class="leaderboard-row ${rankClass}">
+                    <div class="lb-rank ${rankColor}">${medal} ${i + 1}</div>
+                    <div class="lb-team">${p.name}</div>
+                    <div class="lb-score">${p.score || 0} pts</div>
+                    <div><span class="lb-status ${p.approved ? 'active' : 'queue'}">${p.approved ? 'Active' : 'Queue'}</span></div>
+                </div>`;
+            });
+            html += `</div>`;
+            container.innerHTML = html;
+        }
+
+        function exportData() {
+            let csv = "Rank,Team Name,UID,Leader Name,Score,Status\n";
+            let sorted = [...participants].filter(p => p.approved).sort((a, b) => (b.score || 0) - (a.score || 0));
+            sorted.forEach((p, i) => { csv += `${i + 1},${p.name},${p.uid || 'N/A'},${p.leaderName || 'N/A'},${p.score || 0},Active\n`; });
+            let queue = participants.filter(p => !p.approved);
+            queue.forEach(p => { csv += `- ,${p.name},${p.uid || 'N/A'},${p.leaderName || 'N/A'},0,Queue\n`; });
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a'); a.href = url; a.download = "quiz_leaderboard.csv";
+            document.body.appendChild(a); a.click(); document.body.removeChild(a); window.URL.revokeObjectURL(url);
+        }
+
+        function renderAdminControls() {
+            let qHtml = "";
+            questions.forEach((q, index) => { qHtml += `<div class="list-row"><span>${index+1}. ${q.q}</span></div>`; });
+            document.getElementById('questionAdminList').innerHTML = qHtml || "<p>No questions loaded.</p>";
+        }
+
+        async function startGlobalQuiz() {
+            await db.ref('quizState').set({ status: 'active', currentQuestion: 0 });
+            participants.forEach(p => { db.ref('participants/' + p.firebaseKey).update({ currentQuestion: 0 }); });
+            alert("Quiz started for all users.");
+        }
+        async function pauseGlobalQuiz() { await db.ref('quizState').update({ status: 'paused' }); alert("Quiz paused."); }
+        async function endGlobalQuiz() { await db.ref('quizState').update({ status: 'ended' }); alert("Quiz ended."); }
+
+        // ** NEW: Approve All Users **
+        async function approveAllUsers() {
+            if (participants.length === 0) return alert("No users yet.");
+            let queue = participants.filter(p => !p.approved);
+            if (queue.length === 0) return alert("All users already approved.");
+            if (!confirm(`Approve all ${queue.length} waiting users?`)) return;
+            for (let u of queue) {
+                await db.ref('participants/' + u.firebaseKey).update({ approved: true });
+            }
+            alert(`✅ Approved ${queue.length} users!`);
+        }
+
+        async function clearAllUsers() {
+            if (!confirm("⚠️ Delete ALL participants? This cannot be undone.")) return;
+            await db.ref('participants').remove(); participants = []; renderBackendData();
+        }
+
+        // ** NEW: Per-row Approve / Reject **
+        async function approveUser(firebaseKey, name) {
+            await db.ref('participants/' + firebaseKey).update({ approved: true });
+            renderBackendData();
+        }
+        async function rejectUser(firebaseKey, name) {
+            if (!confirm(`Reject and delete ${name}?`)) return;
+            await db.ref('participants/' + firebaseKey).remove();
+            renderBackendData();
+        }
+
+        function renderBackendData() {
+            if (participants.length === 0) {
+                document.getElementById('backendTable').innerHTML = "<p style='color:#aaa;'>No teams yet.</p>";
+                return;
+            }
+            let tableHtml = `<table class="data-table"><thead><tr><th>Rank</th><th>Team</th><th>UID</th><th>Leader</th><th>Score</th><th>Status</th><th>Actions</th></tr></thead><tbody>`;
+            let approved = participants.filter(p => p.approved).sort((a, b) => (b.score || 0) - (a.score || 0));
+            let queue = participants.filter(p => !p.approved);
+            let allSorted = [...approved, ...queue];
+            allSorted.forEach((p) => {
+                let status = p.approved ? 'Active' : 'Queue';
+                let displayRank = p.approved ? (approved.indexOf(p) + 1) : '-';
+                let actions = `<button class="icon-btn approve" onclick="approveUser('${p.firebaseKey}', '${p.name}')" title="Approve">✓</button> <button class="icon-btn reject" onclick="rejectUser('${p.firebaseKey}', '${p.name}')" title="Reject">✗</button>`;
+                tableHtml += `<tr><td>${displayRank}</td><td>${p.name}</td><td>${p.uid || 'N/A'}</td><td>${p.leaderName || 'N/A'}</td><td>${p.score || 0}</td><td style="color:${p.approved ? 'var(--green)' : 'var(--gold)'};">${status}</td><td>${actions}</td></tr>`;
+            });
+            tableHtml += `</tbody></table>`;
+            document.getElementById('backendTable').innerHTML = tableHtml;
+        }
+
+        function renderRankManager() {
+            let rankList = participants.filter(p => p.approved).sort((a, b) => (b.score || 0) - (a.score || 0));
+            let rHtml = "";
+            rankList.forEach((p, index) => {
+                let qualBtn = (p.qualified === false || p.score < 0) ? `<button class="btn btn-small btn-green" onclick="toggleQualifyByKey('${p.firebaseKey}', true)">Qualify</button>` : `<button class="btn btn-small btn-danger" onclick="toggleQualifyByKey('${p.firebaseKey}', false)">Disqualify</button>`;
+                rHtml += `<div class="list-row"><span><strong>#${index+1}:</strong> ${p.name} (${p.score} pts)</span><div class="list-actions">${qualBtn}</div></div>`;
+            });
+            document.getElementById('rankManagerList').innerHTML = rHtml || "<p>No active teams.</p>";
+        }
+
+        async function toggleQualifyByKey(key, status) {
+            let u = participants.find(p => p.firebaseKey === key);
+            if (!u) return;
+            let newScore = status ? Math.max(u.score || 0, 0) : -1;
+            await db.ref('participants/' + key).update({ qualified: status, score: newScore });
+            renderRankManager();
+        }
+
+        async function resetQuestions() {
+            if (!confirm("Reset to default 50 banking questions?")) return;
+            await db.ref('questions').set(defaultQuestions);
+            questions = defaultQuestions;
+            renderAdminControls();
+            alert("Banking questions reset complete!");
+        }
+
+        // ** FIXED: Update Time **
+        async function updateTime() {
+            const input = document.getElementById('timeInput');
+            const val = parseInt(input.value);
+            if (!val || val < 5 || val > 300) { alert("Please enter a time between 5 and 300 seconds."); return; }
+            try {
+                await db.ref('settings').update({ timePerQuestion: val });
+                timePerQuestion = val;
+                document.getElementById('guidelineTime').textContent = val;
+                let status = document.getElementById('timeStatus');
+                if (status) { status.textContent = `✓ Updated to ${val}s`; setTimeout(() => status.textContent = '', 2000); }
+                alert(`✅ Time per question updated to ${val} seconds for everyone.`);
+            } catch (e) {
+                alert("Error updating time: " + e.message);
+            }
+        }
+
+        // ** FIXED: CSV Upload with better error handling **
+        async function handleCSVUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onerror = function() { alert("❌ Error reading file."); };
+
+            reader.onload = async function(e) {
+                try {
+                    const text = e.target.result;
+                    const lines = text.split(/\r?\n/);
+                    const newQuestions = [];
+
+                    for (let i = 0; i < lines.length; i++) {
+                        let line = lines[i].trim();
+                        if (line === '') continue;
+
+                        // Skip header row if it looks like one
+                        if (i === 0 && line.toLowerCase().includes('question') && line.toLowerCase().includes('option')) continue;
+
+                        // Auto-detect separator: Tab or Comma
+                        let parts;
+                        if (line.includes('\t')) parts = line.split('\t');
+                        else parts = line.split(',');
+
+                        if (parts.length >= 6) {
+                            const q = parts[0].trim();
+                            const opts = [parts[1].trim(), parts[2].trim(), parts[3].trim(), parts[4].trim()];
+                            const correct = parseInt(parts[5].trim());
+
+                            if (q && opts.every(o => o) && !isNaN(correct) && correct >= 0 && correct <= 3) {
+                                newQuestions.push({ q, options: opts, correct });
+                            }
+                        }
+                    }
+
+                    if (newQuestions.length > 0) {
+                        await db.ref('questions').set(newQuestions);
+                        questions = newQuestions;
+                        renderAdminControls();
+                        alert(`✅ Successfully uploaded ${newQuestions.length} questions!`);
+                    } else {
+                        alert("❌ No valid questions found.\n\nEnsure 6 columns per row:\nQuestion, Opt1, Opt2, Opt3, Opt4, CorrectIndex(0-3)\n\nSeparator can be Tab or Comma.");
+                    }
+                } catch (err) {
+                    alert("❌ Upload failed: " + err.message);
+                }
+                document.getElementById('csvUpload').value = '';
+            };
+            reader.readAsText(file);
+        }
+
+        async function startQuiz() {
+            if (quizState.status !== 'active') { alert("Quiz not started by admin yet."); return; }
+            if (!currentUser || !currentUser.firebaseKey) { alert("Not logged in."); return; }
+            if (questions.length === 0) {
+                const snapshot = await db.ref('questions').once('value');
+                if (snapshot.exists()) questions = snapshot.val();
+                else { questions = defaultQuestions; await db.ref('questions').set(questions); }
+            }
+            let userSnapshot = await db.ref('participants/' + currentUser.firebaseKey).once('value');
+            let userData = userSnapshot.val();
+            let order = userData.questionOrder;
+            if (!order || order.length !== questions.length) {
+                order = questions.map((_, i) => i);
+                for (let i = order.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [order[i], order[j]] = [order[j], order[i]]; }
+                await db.ref('participants/' + currentUser.firebaseKey).update({ questionOrder: order });
+            }
+            currentOrder = order;
+            currentQuestionIndex = userData.currentQuestion || 0;
+            showScreen('page-quiz');
+            loadQuestion();
+        }
+
+        function loadQuestion() {
+            if (currentQuestionIndex >= questions.length) { showCompletionScreen(); return; }
+            if (quizState.status === 'paused') { clearInterval(timerInterval); }
+            if (currentUser.firebaseKey) { db.ref('participants/' + currentUser.firebaseKey).update({ currentQuestion: currentQuestionIndex }); }
+            const q = questions[currentOrder[currentQuestionIndex]];
+            document.getElementById('questionText').textContent = q.q;
+            document.getElementById('liveProgress').textContent = `Question ${currentQuestionIndex + 1} / ${questions.length}`;
+            const letters = ['A', 'B', 'C', 'D'];
+            document.getElementById('answerOptions').innerHTML = q.options.map((opt, i) => `<button class="btn-option" id="opt${i}" onclick="checkAnswer(${i})"><strong style="margin-right:5px;">${letters[i]}.</strong> ${opt}</button>`).join('');
+            document.querySelectorAll('.btn-option').forEach(btn => btn.classList.remove('correct', 'wrong'));
+            updateQuizHeaderStats();
+            let timeLeft = timePerQuestion;
+            document.getElementById('quizTimer').textContent = timeLeft;
+            if (timerInterval) clearInterval(timerInterval);
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                document.getElementById('quizTimer').textContent = timeLeft;
+                if (timeLeft <= 0) { clearInterval(timerInterval); showNextQuestionScreen(); }
+            }, 1000);
+        }
+
+        function checkAnswer(index) {
+            clearInterval(timerInterval);
+            const q = questions[currentOrder[currentQuestionIndex]];
+            const selectedBtn = document.getElementById(`opt${index}`);
+            const correctBtn = document.getElementById(`opt${q.correct}`);
+            selectedBtn.classList.add(index === q.correct ? 'correct' : 'wrong');
+            correctBtn.classList.add('correct');
+            let scoreChange = (index === q.correct) ? 5 : -2;
+            if (currentUser.firebaseKey) {
+                db.ref('participants/' + currentUser.firebaseKey).once('value', (snapshot) => {
+                    if (snapshot.exists()) {
+                        let currentScore = snapshot.val().score || 0;
+                        let newScore = currentScore + scoreChange;
+                        db.ref('participants/' + currentUser.firebaseKey).update({ score: newScore });
+                        currentUser.score = newScore;
+                        updateQuizHeaderStats();
+                    }
+                });
+            }
+            setTimeout(() => { showNextQuestionScreen(); }, 1500);
+        }
+
+        function showNextQuestionScreen() {
+            currentQuestionIndex++;
+            if (currentQuestionIndex >= questions.length) { showCompletionScreen(); return; }
+            document.getElementById('nextQuestionNum').textContent = `Question ${currentQuestionIndex + 1}`;
+            showScreen('page-next');
+            setTimeout(() => { showScreen('page-quiz'); loadQuestion(); }, 1500);
+        }
+
+        // ** FIXED: End of Quiz — Score & Rank based on SCORE (not entry order) **
+        async function showCompletionScreen() {
+            if (timerInterval) clearInterval(timerInterval);
+            if (currentUser.firebaseKey) { db.ref('participants/' + currentUser.firebaseKey).update({ currentQuestion: 0, questionOrder: [] }); }
+
+            // Wait for Firebase to fully sync the score
+            await new Promise(r => setTimeout(r, 800));
+
+            // Re-fetch fresh data from Firebase to ensure accuracy
+            let snapshot = await db.ref('participants').once('value');
+            let freshParticipants = [];
+            snapshot.forEach(child => { let u = child.val(); u.firebaseKey = child.key; freshParticipants.push(u); });
+            participants = freshParticipants;
+
+            let fresh = participants.find(p => p.firebaseKey === currentUser.firebaseKey);
+            let finalScore = fresh ? (fresh.score || 0) : 0;
+
+            // RANK IS BASED ON SCORE, NOT ENTRY ORDER
+            let approved = participants.filter(p => p.approved);
+            approved.sort((a, b) => (b.score || 0) - (a.score || 0));
+            let finalRank = approved.findIndex(p => p.firebaseKey === currentUser.firebaseKey) + 1;
+            if (finalRank <= 0) finalRank = 'N/A';
+
+            document.getElementById('finalScore').textContent = `${finalScore} Points`;
+            document.getElementById('finalRank').textContent = `#${finalRank}`;
+            showScreen('page-complete');
+        }
+    </script>
+</body>
+</html>
